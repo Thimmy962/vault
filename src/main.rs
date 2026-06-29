@@ -33,14 +33,15 @@ fn main() {
         // pass a reference of the input to the scanner
         let mut scanner = Scanner::build(&input);
         scanner.scan_token().print_token();
+        scanner.scan_token().print_token();
         input.clear();
     }
-
+/*
     if config.debug {
         let debug = Debug::new(&chunk);
         debug.run();
     }
-
+*/
 }
 
 struct Config {

@@ -20,12 +20,21 @@ impl <'a> Debug <'a> {
                 OPCODE::CONSTANT(index) => {
                     self.constant(*index);
                 },
+                OPCODE::NEGATE      => self.instruction("-"),
+                OPCODE::SUB         => self.instruction("-"),
+                OPCODE::DIV         => self.instruction("/"),
+                OPCODE::MUL         => self.instruction("*"),
+                OPCODE::ADD         => self.instruction("+")
             }
         }
     }
 
+    pub fn instruction(&self, val: &str)  {
+        println!("Instruction      ||          {val}")
+    }
+
     // print constants
-    pub fn constant(&self, index: usize) {
+    fn constant(&self, index: usize) {
         match self.values.get(index) { 
             Some(value)=> value.print_value(),
             None => println!("No value is stored")

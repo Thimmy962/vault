@@ -1,14 +1,14 @@
 use crate::token::{Token, TokenKind};
 
 // struct to scan the strings being read
-pub struct Scanner<'a> {
-    source: &'a str,
+pub struct Scanner {
+    source: String,
     current: usize,
     start: usize,
 }
 
-impl<'a> Scanner<'a> {
-    pub fn build(source: &'a str) -> Scanner<'a> {
+impl Scanner {
+    pub fn build(source: String) -> Scanner {
         Scanner {
             source,
             current: 0,
@@ -23,14 +23,12 @@ impl<'a> Scanner<'a> {
                 ' ' | '\n' | '\r' => self.current += 1,
                 '/' => {
                     if self.next_peek() == '/' {
-                        'comment: for i in self.source.as_bytes()[self.current..].iter() {
-                            match i {
-                                b'\n' => {
-                                    self.advance();
-                                    break 'comment;
-                                }
-                                _ => self.advance(),
+                        while let next = self.peek() {
+                            if next == '\n' {
+                                self.advance();
+                                break;
                             }
+                            self.advance();
                         }
                     } else {
                         break;
@@ -76,7 +74,7 @@ impl<'a> Scanner<'a> {
     }
 
     // creates a number token
-    fn number(&mut self) -> Token <'_>{
+    fn number(&mut self) -> Token{
         let mut decimal = false;
         while self.peek().is_ascii_digit() {
             self.advance();
@@ -96,7 +94,7 @@ impl<'a> Scanner<'a> {
         self.make_token(TokenKind::INT)
     }
 
-    fn identifier(&mut self) -> Token <'_>{
+    fn identifier(&mut self) -> Token{
         while self.peek().is_alphanumeric() || self.peek() == '_' {
             self.advance();
         }
@@ -108,23 +106,30 @@ impl<'a> Scanner<'a> {
         character == self.peek()
     }
 
-    fn make_token(&mut self, kind: TokenKind) -> Token <'_>{
+    fn make_token(&mut self, kind: TokenKind) -> Token{
         Token {
             kind,
-            lexeme: &self.source[self.start..self.current],
+            lexeme: self.source[self.start..self.current].to_string(),
         }
     }
 
-    fn string(&mut self) -> Token<'_> {
+    fn string(&mut self) -> Token {
         while self.peek() != '"' {
             self.advance();
         }
 
         self.advance();
-        return self.make_token(TokenKind::STRING)
+        return Token {
+            kind: TokenKind::STRING,
+            lexeme: self.source[self.start + 1..self.current - 1].to_string()
+        };
     }
 
-    pub fn scan_token(&mut self) -> Token<'_> {
+    fn end(&mut self) -> bool {
+        self.peek() == '\0'
+    }
+
+    pub fn scan_token(&mut self) -> Token{
         self.skip_whitespaces();
         self.start = self.current; // after clearing white spaces (if there is any) set the value of
 
@@ -145,6 +150,7 @@ impl<'a> Scanner<'a> {
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
             '"' => return self.string(),
+            '\0' => return self.make_token(TokenKind::EOT),
             _ => return self.make_token(TokenKind::ERROR),
         }
     }

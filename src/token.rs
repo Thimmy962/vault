@@ -1,18 +1,22 @@
 #[derive(Debug)]
+#[derive(PartialEq)]
+#[derive(Clone)]
 pub enum TokenKind {
+    BEGIN,
     MINUS, PLUS, STAR, SLASH, INT, DOUBLE, ERROR,
-    IDENTIFIER, STRING,
+    IDENTIFIER, STRING, CHAR,
     OBRACKET, /*Open Bracket*/ CBRACKET, /*Close Bracket*/
+    EOT //end of token
 }
 
 
-pub struct Token <'a>{
+pub struct Token {
     pub kind: TokenKind,
-    pub lexeme: &'a str
+    pub lexeme: String
 }
 
 
-impl <'a>Token <'a>{
+impl Token{
     pub fn print_token(&self) {
         println!("Token: {:?}, {}", self.kind, self.lexeme);
     }

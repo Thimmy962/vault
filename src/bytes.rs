@@ -1,20 +1,22 @@
 pub enum Value{
-    INT(i32), DOUBLE(f32), BOOL(bool), NIL
+    INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), NIL
 }
 
 impl  Value {
     pub fn print_value(&self) {
         match self {
-                Value::INT(val) =>      println!("CONSTANT       || int     {val}"),
-                Value::DOUBLE(val) =>   println!("CONSTANT       || float   {val}"),
-                Value::BOOL(val) =>     println!("CONSTANT       || bool    {val}"),
-                Value::NIL =>           println!("CONSTANT       || nil     NIL"),
+                Value::INT(val)     =>      println!("CONSTANT         || int      {val}"),
+                Value::DOUBLE(val)  =>      println!("CONSTANT         || float    {val}"),
+                Value::BOOL(val)    =>      println!("CONSTANT         || bool     {val}"),
+                Value::CHAR(val)    =>      println!("CONSTANT         || char     {val}"),
+                Value::NIL          =>      println!("CONSTANT         || nil      NIL"),
         }
     }
 }
 
+
 pub enum OPCODE {
-    CONSTANT(usize) // houses the 
+    SUB, ADD, MUL, DIV, NEGATE, CONSTANT(usize) // houses the 
 }
 
 
@@ -25,7 +27,7 @@ pub struct Bytes {
 
 impl Bytes {
     // build a new instance of the Bytes struct
-    pub fn new() -> Bytes {
+    pub fn  new() -> Bytes {
         Bytes { codes: Vec::new(), values: Vec::new() }
     }
     
@@ -39,6 +41,9 @@ impl Bytes {
         &self.values
     }
 
+    pub fn write(&mut self, code: OPCODE) {
+        self.codes.push(code);
+    }
 
     pub fn write_constant(&mut self, value: Value) {
         // push the value into the Value vec

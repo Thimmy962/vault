@@ -20,17 +20,18 @@ impl <'a> Debug <'a> {
                 OPCODE::CONSTANT(index) => {
                     self.constant(*index);
                 },
-                OPCODE::NEGATE      => self.instruction("-"),
-                OPCODE::SUB         => self.instruction("-"),
-                OPCODE::DIV         => self.instruction("/"),
-                OPCODE::MUL         => self.instruction("*"),
-                OPCODE::ADD         => self.instruction("+")
+                OPCODE::NEGATE      => self.instruction("Negate", "-"),
+                OPCODE::SUB         => self.instruction("Subtract", "-"),
+                OPCODE::DIV         => self.instruction("Divide", "/"),
+                OPCODE::MUL         => self.instruction("Multiply", "*"),
+                OPCODE::ADD         => self.instruction("Addition", "+"),
+                OPCODE::EOT         => println!("The End")
             }
         }
     }
 
-    pub fn instruction(&self, val: &str)  {
-        println!("Instruction      ||          {val}")
+    pub fn instruction(&self, instruction: &str, val: &str)  {
+        println!("{:<12}     ||          {}", instruction, val);
     }
 
     // print constants

@@ -54,7 +54,17 @@ impl <'a>Parser <'a>{
         previous: None, current: None, error: false
         }
     }
-   
+
+    fn write_constant(&mut self, value: Value) {
+        self.bytecodes.write_constant(value);
+    }
+
+
+    // write an opcode that has no constant value to vec of bytecode
+    fn write(&mut self, code: OPCODE) {
+        self.bytecodes.write(code);
+    }
+
     fn advance(&mut self) {
         self.previous = self.current.take();
         'advance: loop {
@@ -65,9 +75,61 @@ impl <'a>Parser <'a>{
         }
     }
 
-    // write an opcode that has no constant value to vec of bytecode
-    fn write(&mut self, code: OPCODE) {
-        self.bytecodes.write(code);
+    fn unary(&mut self) {
+        let opcode: OPCODE;
+        // match token kind to determine the opcode
+        match self.previous.as_ref().unwrap().kind {
+            TokenKind::MINUS => opcode = OPCODE::NEGATE,
+            _ => return
+        }
+
+        self.parseprecedence(PRECEDENCE::Unary);
+
+        self.bytecodes.write(opcode);
+    }
+
+
+    fn binary(&mut self) {
+        let opcode: OPCODE;
+        // match token kind to determine the opcode
+        match self.previous.as_ref().unwrap().kind {
+            TokenKind::MINUS => opcode = OPCODE::SUB,
+            TokenKind::PLUS => opcode = OPCODE::ADD,
+            TokenKind::STAR => opcode = OPCODE::MUL,
+            TokenKind::SLASH => opcode = OPCODE::DIV,
+            _ => return
+        }
+
+        let prec = self.getpreviousprecedence();
+
+        self.parseprecedence(prec.next());   
+
+        self.bytecodes.write(opcode);
+    }
+
+    fn number(&mut self) {
+        if self.previous.as_ref().unwrap().kind == TokenKind::INT {
+            let val = self.previous.as_ref().unwrap().lexeme.clone().parse::<i32>().unwrap();
+            self.write_constant(Value::INT(val));
+        } else {
+            let val = self.previous.as_ref().unwrap().lexeme.clone().parse::<f32>().unwrap();
+            self.write_constant(Value::DOUBLE(val));
+        }
+    }
+
+
+    fn consume(&mut self, token_kind: TokenKind, msg: &str) {
+        if self.current.as_ref().unwrap().kind == token_kind {
+                self.advance();
+                return
+            } else {
+                self.error(msg.to_string())
+            }
+    }
+
+    fn bracket(&mut self) {
+        self.parseprecedence(PRECEDENCE::Asssignment);
+        self.consume(TokenKind::CBRACKET, "Expects a ')'");
     }
 
     // get a prefix for a token; if such token has no prefix it returns None
@@ -75,6 +137,7 @@ impl <'a>Parser <'a>{
         match self.previous.as_ref().unwrap().kind {
             TokenKind::MINUS => Some(Self::unary),
             TokenKind::INT | TokenKind::DOUBLE=> Some(Self::number),
+            TokenKind::OBRACKET => Some(Self::bracket),
             _ => None,
         }
     }
@@ -107,16 +170,14 @@ impl <'a>Parser <'a>{
         }
     }
 
-    fn write_constant(&mut self, value: Value) {
-        self.bytecodes.write_constant(value);
+    pub fn expression(&mut self) {
+        self.parseprecedence(PRECEDENCE::Asssignment);
     }
 
-    pub fn expression(&mut self) {
-        self.parserexpression(PRECEDENCE::None);
-    }
 
     pub fn endcompiler(&mut self) {
-        unimplemented!();
+        self.consume(TokenKind::EOT, "Expects end of token");
+        self.write(OPCODE::EOT);
     }
     
     fn error(&mut self, message: String) {
@@ -124,7 +185,7 @@ impl <'a>Parser <'a>{
         eprintln!("{message}")
     }
 
-    pub fn parserexpression(&mut self, precedence: PRECEDENCE) {
+    pub fn parseprecedence(&mut self, precedence: PRECEDENCE) {
         self.advance();
         match self.getprefix() {
             Some(func) => func(self),
@@ -132,59 +193,20 @@ impl <'a>Parser <'a>{
                 self.error("Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
             }
         }
-        /*
-        while  self.getcurrentprecedence() as u8 >= precedence.clone()  as u8 {
+
+        //while self.current.as_ref().unwrap().kind != TokenKind::EOT && 
+        while self.getcurrentprecedence() >= precedence {
             self.advance();
             match self.getinfix() {
                 Some(func) => func(self),
-                None => {
-                    eprintln!("Syntax error: '{}' is not a valid syntax", self.current.as_ref().unwrap().lexeme);
+                None =>  {
+                    self.error("Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
+                    break;
                 }
             }
-        }*/
-    }
-
-    fn unary(&mut self) {
-        let opcode: OPCODE;
-        // match token kind to determine the opcode
-        match self.previous.as_ref().unwrap().kind {
-            TokenKind::MINUS => opcode = OPCODE::NEGATE,
-            _ => return
-        }
-
-        self.parserexpression(PRECEDENCE::Unary);
-
-        self.bytecodes.write(opcode);
-    }
-
-
-    fn binary(&mut self) {
-        let opcode: OPCODE;
-        // match token kind to determine the opcode
-        match self.previous.as_ref().unwrap().kind {
-            TokenKind::MINUS => opcode = OPCODE::SUB,
-            TokenKind::PLUS => opcode = OPCODE::ADD,
-            TokenKind::STAR => opcode = OPCODE::MUL,
-            TokenKind::SLASH => opcode = OPCODE::DIV,
-            _ => return
-        }
-        
-        let prec = self.getpreviousprecedence();
-
-        self.parserexpression(prec.next());   
-
-        self.bytecodes.write(opcode);
-    }
-
-    fn number(&mut self) {
-        if self.previous.as_ref().unwrap().kind == TokenKind::INT {
-            let val = self.previous.as_ref().unwrap().lexeme.clone().parse::<i32>().unwrap();
-            self.write_constant(Value::INT(val));
-        } else {
-            let val = self.previous.as_ref().unwrap().lexeme.clone().parse::<f32>().unwrap();
-            self.write_constant(Value::DOUBLE(val));
         }
     }
+
 }
 
 
@@ -192,5 +214,6 @@ pub fn compile<'a>(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes) -> bool {
     let mut parser = Parser::build(scanner, bytecodes);
     parser.advance();
     parser.expression();
+    parser.endcompiler();
     parser.error
 }

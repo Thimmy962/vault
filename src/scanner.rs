@@ -20,14 +20,12 @@ impl Scanner {
         loop {
             let ch = self.peek();
             match ch {
-                ' ' | '\n' | '\r' => self.current += 1,
+                ' ' | '\n' | '\r' => {
+                    self.advance();
+                },
                 '/' => {
                     if self.next_peek() == '/' {
-                        while let next = self.peek() {
-                            if next == '\n' {
-                                self.advance();
-                                break;
-                            }
+                        while self.peek() != '\n' && !self.end(){
                             self.advance();
                         }
                     } else {
@@ -126,12 +124,19 @@ impl Scanner {
     }
 
     fn end(&mut self) -> bool {
-        self.peek() == '\0'
+        self.current >= self.source.len()
     }
 
     pub fn scan_token(&mut self) -> Token{
         self.skip_whitespaces();
         self.start = self.current; // after clearing white spaces (if there is any) set the value of
+
+        if self.end() {
+            return Token {
+                kind: TokenKind::EOT,
+                lexeme: "".to_string(),
+            };
+        }
 
         // start to current
         if self.peek().is_ascii_digit() {
@@ -145,12 +150,11 @@ impl Scanner {
         match self.consume() {
             '+' => return self.make_token(TokenKind::PLUS),
             '-' => return self.make_token(TokenKind::MINUS),
-            '*' => return self.make_token(TokenKind::SLASH),
+            '*' => return self.make_token(TokenKind::STAR),
             '/' => return self.make_token(TokenKind::SLASH),
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
             '"' => return self.string(),
-            '\0' => return self.make_token(TokenKind::EOT),
             _ => return self.make_token(TokenKind::ERROR),
         }
     }

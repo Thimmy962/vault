@@ -1,22 +1,25 @@
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value{
     INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), NIL
 }
 
 impl  Value {
     pub fn print_value(&self) {
+        let label = "CONSTANT";
         match self {
-                Value::INT(val)     =>      println!("CONSTANT         || int      {val}"),
-                Value::DOUBLE(val)  =>      println!("CONSTANT         || float    {val}"),
-                Value::BOOL(val)    =>      println!("CONSTANT         || bool     {val}"),
-                Value::CHAR(val)    =>      println!("CONSTANT         || char     {val}"),
-                Value::NIL          =>      println!("CONSTANT         || nil      NIL"),
+            Value::INT(val)    => println!("{:<16} || int      {}", label, val),
+            Value::DOUBLE(val) => println!("{:<16} || float    {}", label, val),
+            Value::BOOL(val)   => println!("{:<16} || bool     {}", label, val),
+            Value::CHAR(val)   => println!("{:<16} || char     {}", label, val),
+            Value::NIL         => println!("{:<16} || nil      NIL", label),
         }
-    }
+    } 
 }
 
-
+#[derive(Debug, Clone)]
 pub enum OPCODE {
-    SUB, ADD, MUL, DIV, NEGATE, CONSTANT(usize) // houses the 
+    SUB, ADD, MUL, DIV, NEGATE, CONSTANT(usize),// houses the 
+    EOT,
 }
 
 
@@ -40,6 +43,8 @@ impl Bytes {
     pub fn values(&self) -> &Vec<Value> {
         &self.values
     }
+    
+
 
     pub fn write(&mut self, code: OPCODE) {
         self.codes.push(code);
@@ -53,5 +58,12 @@ impl Bytes {
         //create an constant with the associated index as the position of the constant written to
         //the Value vector of bytes
         self.codes.push(OPCODE::CONSTANT(pos));
+    }
+
+
+
+    pub fn clear(&mut self) {
+        self.values.clear();
+        self.codes.clear();
     }
 }

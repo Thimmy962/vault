@@ -7,13 +7,15 @@ mod debug;
 mod scanner;
 mod token;
 mod compiler;
-
+mod vm;
 
 // static config: Config;
 
 use std::{env, fs, io::{self, Write}, process};
 use scanner::Scanner;
-use crate::bytes::Bytes;
+use bytes::Bytes;
+
+use crate::vm::VM;
 
 fn main() {
     let config = Config::new(); // read command line arguments
@@ -55,6 +57,7 @@ fn non_shell(config: &Config) {
 fn shell(_config: &Config) {
     let mut _chunk = Bytes::new();
     let mut input = String::new();
+    let mut vm = VM::build();
     loop {
         print!(":> ");
         let _ = io::stdout().flush();
@@ -74,16 +77,18 @@ fn shell(_config: &Config) {
         // pass a reference of the input to the scanner
         let mut scanner = Scanner::build((&input).to_string());
 
-        let mut chunk = bytes::Bytes::new();
-        let cmpiler = compiler::compile(&mut scanner, &mut chunk);
-    
+        let cmpiler = compiler::compile(&mut scanner, &mut _chunk);
         if _config.debug {
-            let debugger = debug::Debug::new(&chunk);
+            let debugger = debug::Debug::new(&_chunk);
             if !cmpiler {
                 debugger.run();
                 }
         }
+        //retru
+        vm.run(&_chunk);
         input.clear();
+        _chunk.clear();
+
     }
 
 }

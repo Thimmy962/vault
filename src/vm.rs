@@ -156,7 +156,6 @@ impl VM{
                         return true;
                     }
                 }
-                _ => return true
             }
         }
         false

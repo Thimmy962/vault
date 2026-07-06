@@ -127,6 +127,43 @@ impl Scanner {
         self.current >= self.source.len()
     }
 
+    // > has been consumed already
+    fn right_arrow(&mut self) -> Token {
+        if self.match_character('=') { // if the next char to be consumed is '='
+            self.advance(); // consume it and set the token type for this token to greater than or equal
+            // to
+            return self.make_token(TokenKind::GREATER_EQUAL);
+        }
+        self.make_token(TokenKind::GREATER_THAN)
+    }
+
+
+    // < has been consumed already
+    fn left_arrow(&mut self) -> Token {
+        if self.match_character('=') { // if the next char to be consumed is '='
+            self.advance(); // consume it and set the token type for this token to less than or equal
+            // to
+            return self.make_token(TokenKind::LESS_EQUAL);
+        }
+        self.make_token(TokenKind::LESS_THAN)
+    }
+
+    fn equal_to_sign(&mut self) -> Token{
+        if self.match_character('=') {
+            self.advance();
+            return self.make_token(TokenKind::EQUAL_EQUAL);
+        }
+        self.make_token(TokenKind::EQUAL)
+    }
+
+    fn bang_equal(&mut self) -> Token {
+        if self.match_character('=') {
+            self.advance();
+            return self.make_token(TokenKind::BANG_EQUAL);
+        }
+        self.make_token(TokenKind::BANG)
+    }
+
     pub fn scan_token(&mut self) -> Token{
         self.skip_whitespaces();
         self.start = self.current; // after clearing white spaces (if there is any) set the value of
@@ -154,7 +191,11 @@ impl Scanner {
             '/' => return self.make_token(TokenKind::SLASH),
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
+            '>' => return self.right_arrow(),
+            '<' => return self.left_arrow(),
+            '=' => return self.equal_to_sign(),
             '"' => return self.string(),
+            '!' => return self.scan_bang(),
             _ => return self.make_token(TokenKind::ERROR),
         }
     }

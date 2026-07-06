@@ -5,6 +5,10 @@ pub enum TokenKind {
     BEGIN,
     MINUS, PLUS, STAR, SLASH, INT, DOUBLE, ERROR,
     IDENTIFIER, STRING, CHAR,
+    GREATER_EQUAL, LESS_EQUAL, 
+    LESS_THAN, GREATER_THAN,
+    EQUAL, EQUAL_EQUAL,
+    BANG, BANG_EQUAL,
     OBRACKET, /*Open Bracket*/ CBRACKET, /*Close Bracket*/
     EOT //end of token
 }

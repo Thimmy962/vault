@@ -164,6 +164,7 @@ impl Scanner {
         self.make_token(TokenKind::BANG)
     }
 
+
     pub fn scan_token(&mut self) -> Token{
         self.skip_whitespaces();
         self.start = self.current; // after clearing white spaces (if there is any) set the value of
@@ -195,7 +196,7 @@ impl Scanner {
             '<' => return self.left_arrow(),
             '=' => return self.equal_to_sign(),
             '"' => return self.string(),
-            '!' => return self.scan_bang(),
+            '!' => return self.bang_equal(),
             _ => return self.make_token(TokenKind::ERROR),
         }
     }

@@ -1,3 +1,9 @@
+pub trait IsNumber {}
+impl IsNumber for  i32{}
+impl IsNumber for  f32{}
+
+
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value{
     INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), NIL
@@ -19,7 +25,10 @@ impl  Value {
 #[derive(Debug, Clone)]
 pub enum OPCODE {
     SUB, ADD, MUL, DIV, NEGATE, CONSTANT(usize),// houses the 
-    EOT,
+    GREATER_EQUAL, LESS_EQUAL, 
+    LESS_THAN, GREATER_THAN,
+    EQUAL, EQUAL_EQUAL,
+    BANG, BANG_EQUAL, EOT,
 }
 
 

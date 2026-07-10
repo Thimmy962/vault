@@ -45,13 +45,15 @@ fn non_shell(config: &Config) {
     let mut scanner = Scanner::build(file);
     let mut chunk = bytes::Bytes::new();
     let cmpiler = compiler::compile(&mut scanner, &mut chunk);
-    
+    let mut vm = VM::build();
     if config.debug {
         let debugger = debug::Debug::new(&chunk);
         if cmpiler == false {
             debugger.run();
         }
     }
+    vm.run(&chunk);
+    chunk.clear();
 }
 
 fn shell(_config: &Config) {
@@ -83,6 +85,7 @@ fn shell(_config: &Config) {
             if !cmpiler {
                 debugger.run();
                 }
+            return;
         }
         //retru
         vm.run(&_chunk);

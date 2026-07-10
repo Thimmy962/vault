@@ -20,12 +20,20 @@ impl <'a> Debug <'a> {
                 OPCODE::CONSTANT(index) => {
                     self.constant(*index);
                 },
-                OPCODE::NEGATE      => self.instruction("Negate", "-"),
-                OPCODE::SUB         => self.instruction("Subtract", "-"),
-                OPCODE::DIV         => self.instruction("Divide", "/"),
-                OPCODE::MUL         => self.instruction("Multiply", "*"),
-                OPCODE::ADD         => self.instruction("Addition", "+"),
-                OPCODE::EOT         => println!("The End")
+                OPCODE::NEGATE          => self.instruction("Negate", "-"),
+                OPCODE::SUB             => self.instruction("Subtract", "-"),
+                OPCODE::DIV             => self.instruction("Divide", "/"),
+                OPCODE::MUL             => self.instruction("Multiply", "*"),
+                OPCODE::ADD             => self.instruction("Addition", "+"),
+                OPCODE::EOT             => println!("The End"),
+                OPCODE::GREATER_THAN    => self.instruction("Greater Than", ">"),
+                OPCODE::GREATER_EQUAL   => self.instruction("Greater or Equal", ">="),
+                OPCODE::LESS_EQUAL      => self.instruction("Less or Equal", "<="),
+                OPCODE::LESS_THAN       => self.instruction("Less Than", "<"),
+                OPCODE::EQUAL           => self.instruction("Assignemnt", "="),
+                OPCODE::EQUAL_EQUAL     => self.instruction("Equality", "=="),
+                OPCODE::BANG            => self.instruction("Bang", "!"),
+                OPCODE::BANG_EQUAL      => self.instruction("Not Equal", "!=")
             }
         }
     }

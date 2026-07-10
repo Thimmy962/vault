@@ -6,7 +6,7 @@ use crate::token::{Token, TokenKind};
 #[derive(PartialEq, Clone, Copy, Debug, PartialOrd, Ord, Eq)]
 pub enum PRECEDENCE {
     None, 
-    Asssignment, // =
+    Assignment, // =
     Or, // or
     And, // and
     Equality, // ==
@@ -22,8 +22,8 @@ pub enum PRECEDENCE {
 impl PRECEDENCE {
     pub fn next(&self)-> Self {
         match self {
-            PRECEDENCE::None            => PRECEDENCE::Asssignment,
-            PRECEDENCE::Asssignment     => PRECEDENCE::Or,
+            PRECEDENCE::None            => PRECEDENCE::Assignment,
+            PRECEDENCE::Assignment     => PRECEDENCE::Or,
             PRECEDENCE::Or              => PRECEDENCE::And,
             PRECEDENCE::And             => PRECEDENCE::Equality,
             PRECEDENCE::Equality        => PRECEDENCE::Comparison,
@@ -80,6 +80,7 @@ impl <'a>Parser <'a>{
         // match token kind to determine the opcode
         match self.previous.as_ref().unwrap().kind {
             TokenKind::MINUS => opcode = OPCODE::NEGATE,
+            TokenKind::BANG => opcode = OPCODE::BANG,
             _ => return
         }
 
@@ -97,6 +98,12 @@ impl <'a>Parser <'a>{
             TokenKind::PLUS => opcode = OPCODE::ADD,
             TokenKind::STAR => opcode = OPCODE::MUL,
             TokenKind::SLASH => opcode = OPCODE::DIV,
+            TokenKind::GREATER_THAN => opcode = OPCODE::GREATER_THAN,
+            TokenKind::GREATER_EQUAL => opcode = OPCODE::GREATER_EQUAL,
+            TokenKind::LESS_THAN => opcode = OPCODE::LESS_THAN,
+            TokenKind::LESS_EQUAL => opcode = OPCODE::LESS_EQUAL,
+            TokenKind::EQUAL_EQUAL => opcode = OPCODE::EQUAL_EQUAL,
+            TokenKind::BANG_EQUAL => opcode = OPCODE::BANG_EQUAL,
             _ => return
         }
 
@@ -123,20 +130,21 @@ impl <'a>Parser <'a>{
                 self.advance();
                 return
             } else {
-                self.error(msg.to_string())
+                self.error = true;
+                self.error(msg.to_string());
             }
     }
 
     fn bracket(&mut self) {
-        self.parseprecedence(PRECEDENCE::Asssignment);
+        self.parseprecedence(PRECEDENCE::Assignment);
         self.consume(TokenKind::CBRACKET, "Expects a ')'");
     }
 
     // get a prefix for a token; if such token has no prefix it returns None
     fn getprefix(&self) -> Option<fn(&mut Self)> {
         match self.previous.as_ref().unwrap().kind {
-            TokenKind::MINUS => Some(Self::unary),
-            TokenKind::INT | TokenKind::DOUBLE=> Some(Self::number),
+            TokenKind::MINUS | TokenKind::BANG => Some(Self::unary),
+            TokenKind::INT | TokenKind::DOUBLE => Some(Self::number),
             TokenKind::OBRACKET => Some(Self::bracket),
             _ => None,
         }
@@ -147,6 +155,8 @@ impl <'a>Parser <'a>{
          match self.current.as_ref().unwrap().kind {
             TokenKind::MINUS | TokenKind::PLUS => PRECEDENCE::Term,
             TokenKind::SLASH | TokenKind::STAR => PRECEDENCE::Factor,
+            TokenKind::GREATER_THAN | TokenKind::LESS_THAN | TokenKind::EQUAL_EQUAL |
+            TokenKind::GREATER_EQUAL | TokenKind::LESS_EQUAL | TokenKind::BANG_EQUAL => PRECEDENCE::Comparison,
             _ => PRECEDENCE::None,
         } 
     }
@@ -164,14 +174,17 @@ impl <'a>Parser <'a>{
 
     fn getinfix(&self) -> Option<fn(&mut Self)> {
          match self.previous.as_ref().unwrap().kind {
-            TokenKind::MINUS | TokenKind::PLUS | TokenKind::STAR | TokenKind::SLASH
-                => Some(Self::binary),
+            TokenKind::MINUS | TokenKind::PLUS | TokenKind::STAR | TokenKind::SLASH |
+            TokenKind::GREATER_THAN | TokenKind::LESS_THAN | TokenKind::EQUAL_EQUAL |
+            TokenKind::GREATER_EQUAL | TokenKind::LESS_EQUAL | TokenKind::BANG_EQUAL
+               => Some(Self::binary),
+
             _ => None,
         }
     }
 
     pub fn expression(&mut self) {
-        self.parseprecedence(PRECEDENCE::Asssignment);
+        self.parseprecedence(PRECEDENCE::Assignment);
     }
 
 
@@ -190,12 +203,12 @@ impl <'a>Parser <'a>{
         match self.getprefix() {
             Some(func) => func(self),
             None => {
+                self.previous.as_ref().unwrap().print_token();
                 self.error("Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
             }
         }
 
-        //while self.current.as_ref().unwrap().kind != TokenKind::EOT && 
-        while self.getcurrentprecedence() >= precedence {
+        while self.current.as_ref().unwrap().kind != TokenKind::EOT && self.getcurrentprecedence() >= precedence {
             self.advance();
             match self.getinfix() {
                 Some(func) => func(self),
@@ -206,7 +219,6 @@ impl <'a>Parser <'a>{
             }
         }
     }
-
 }
 
 

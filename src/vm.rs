@@ -181,6 +181,10 @@ impl VM{
             Value::BOOL(a) => {
                 self.values.push(Value::BOOL(!a))
             }
+            Value::STRING(string) => {
+                let val = string.len() > 0;
+                self.values.push(Value::BOOL(!val))
+            }
             _ => self.values.push(Value::BOOL(false))
         }
 

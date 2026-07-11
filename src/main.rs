@@ -88,7 +88,9 @@ fn shell(_config: &Config) {
             return;
         }
         //retru
-        vm.run(&_chunk);
+        if !cmpiler {
+            vm.run(&_chunk);
+        }
         input.clear();
         _chunk.clear();
 
@@ -114,7 +116,7 @@ impl Config {
                 debug = true;
             }
 
-            // .vlt is the name of the file that contains the main function i.e only file that
+            // .vlt is the name of the file that contains the main function that is the only file that
             // should be passed to the compiler, every other file(".vt") should be called directly
             // or indirectly by main function
             if arg.contains(".vlt")  {

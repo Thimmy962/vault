@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 pub trait IsNumber {}
 impl IsNumber for  i32{}
 impl IsNumber for  f32{}
@@ -6,7 +8,7 @@ impl IsNumber for  f32{}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value{
-    INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), NIL
+    INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), STRING(Rc<String>), NIL
 }
 
 impl  Value {
@@ -17,12 +19,14 @@ impl  Value {
             Value::DOUBLE(val) => println!("{:<16} || float    {}", label, val),
             Value::BOOL(val)   => println!("{:<16} || bool     {}", label, val),
             Value::CHAR(val)   => println!("{:<16} || char     {}", label, val),
+            Value::STRING(val)   => println!("{:<16} || char     {}", label, val),
             Value::NIL         => println!("{:<16} || nil      NIL", label),
         }
     } 
 }
 
 #[derive(Debug, Clone)]
+#[allow(non_camel_case_types)]
 pub enum OPCODE {
     SUB, ADD, MUL, DIV, NEGATE, CONSTANT(usize),// houses the 
     GREATER_EQUAL, LESS_EQUAL, 

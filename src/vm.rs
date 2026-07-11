@@ -1,8 +1,8 @@
+use std::{collections::HashMap, rc::Rc};
+
 use crate::bytes::{Bytes, OPCODE, Value};
 
-pub struct VM{
-    values: Vec<Value>,
-}
+
 
  macro_rules! compute {
     ($opcode:expr, $a:expr, $b:expr, $type:ident) => {
@@ -23,6 +23,21 @@ pub struct VM{
     };
 }
 
+macro_rules! concatenate {
+    ($opcode: expr, $a: expr, $b: expr) => {
+        match $opcode {
+            OPCODE::ADD => {
+                let combined = Rc::new(format!("{}{}", $a, $b));
+                Value::STRING(combined)
+            },
+            _ => {
+                eprintln!("Runtime Error: String can only be concatenated.");
+                return true; 
+            }
+        }
+    };
+}
+
 macro_rules! compare {
     ($opcode:expr, $a:expr, $b:expr) => {
         match $opcode {
@@ -37,11 +52,16 @@ macro_rules! compare {
     };
 }
 
+pub struct VM{
+    values: Vec<Value>,
+    globalvar: HashMap<Value, Value>
+}
 
 impl VM{
     pub fn build() -> Self {
         VM {
-            values: Vec::new()
+            values: Vec::new(),
+            globalvar: HashMap::new()
         }
     }
     fn negate(&mut self) -> bool {
@@ -81,7 +101,7 @@ impl VM{
             Some(value) => value,
             None => {
                 eprintln!("Runtime Error: Stack underflow (missing left operand).");
-                return true;
+                return true
             }
         };
 
@@ -90,8 +110,9 @@ impl VM{
             (Value::DOUBLE(a), Value::DOUBLE(b)) => compute!(*opcode, a, b, DOUBLE),
             (Value::DOUBLE(a), Value::INT(b))    => compute!(*opcode, a, b as f32, DOUBLE),
             (Value::INT(a), Value::DOUBLE(b))    => compute!(*opcode, a as f32, b, DOUBLE),
+            (Value::STRING(a), Value::STRING(b))    => concatenate!(*opcode, a, b),
             _ => {
-                eprintln!("Runtime Error: Operands must be numeric types.");
+                eprintln!("Runtime Error: Operands of '{:?}' must be numeric types or situation where each operands is a string .", *opcode);
                 return true;
             }
         };
@@ -133,7 +154,8 @@ impl VM{
 
         // 4. Boolean comparisons (false evaluates as less than true)
         (Value::BOOL(a), Value::BOOL(b))     => compare!(*code, a, b),
-
+        
+        (Value::STRING(a), Value::STRING(b))    => compare!(*code, a, b),
         // 5. Fallback for completely invalid combinations
         // (e.g., comparing a CHAR to an INT, or anything involving NIL)
         _ => {
@@ -142,6 +164,26 @@ impl VM{
         }
     };
         self.values.push(Value::BOOL(res));
+        false
+    }
+
+    fn isfalsey(&mut self) -> bool {
+        let value = match self.values.pop() {
+            Some(value) => value,
+            None => {
+                eprintln!("Runtime Error: Stack underflow (missing left operand).");
+                return true;
+            }    
+        };
+
+        match value {
+            Value::NIL => self.values.push(Value::BOOL(false)),
+            Value::BOOL(a) => {
+                self.values.push(Value::BOOL(!a))
+            }
+            _ => self.values.push(Value::BOOL(false))
+        }
+
         false
     }
 
@@ -154,7 +196,10 @@ impl VM{
                     if self.negate() {
                         return true;
                     }
-                }
+                },
+                
+                OPCODE::BANG => if self.isfalsey() { return true; }
+
                 OPCODE::CONSTANT(index) => {
                     match chunk.values().get(*index) {
                         Some(value) => {
@@ -186,8 +231,10 @@ impl VM{
                             Value::DOUBLE(num) => println!("{:.5}",num),
                             Value::CHAR(character) => println!("{character}"),
                             Value::BOOL(val)=> println!("{val}"),
+                            Value::STRING(val) => println!("{val}"),
+
                             _ => {
-                                eprintln!("Runtime Error: Operands must be numeric types.");
+                                eprintln!("Runtime Error: Value type not handled for printing");
                                 return true;
                             }
                         }

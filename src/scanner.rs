@@ -62,7 +62,8 @@ impl Scanner {
         } else {
             character = self.source.chars().nth(self.current).unwrap_or('\0');
         }
-        self.current += 1;
+        //self.current += 1;
+        self.advance();
         character
     }
 
@@ -96,7 +97,20 @@ impl Scanner {
         while self.peek().is_alphanumeric() || self.peek() == '_' {
             self.advance();
         }
-        self.make_token(TokenKind::IDENTIFIER)
+        let kind = Scanner::GetTokenKind(&self.source[self.start..self.current]);
+        self.make_token(kind)
+    }
+
+    fn GetTokenKind(string: &str) -> TokenKind {
+        match string {
+            "int"   => TokenKind::INT,
+            "float" => TokenKind::DOUBLE,
+            "char"  => TokenKind::CHAR,
+            "string" => TokenKind::STRING,
+            "false" => TokenKind::FALSE,
+            "true"  => TokenKind::TRUE,
+            _       => TokenKind::IDENTIFIER
+        }
     }
 
     // check is the next character is to be consumed is equal the character passed to match
@@ -164,8 +178,21 @@ impl Scanner {
         self.make_token(TokenKind::BANG)
     }
 
+    fn character(&mut self) -> Token {
+        /*
+        * self.current is pointing at the character as the open single quote has been consumed
+        */
+        self.advance(); // points self.current to the closing single quote
+        self.advance(); // points self.current to the next character after tge closing single quote
 
-    pub fn scan_token(&mut self) -> Token{
+        self.start += 1;
+        Token {
+            kind: TokenKind::CHAR,
+            lexeme: self.source[self.start..self.current-1].to_string()
+        }
+    }
+
+    pub fn scan_token(&mut self) -> Token {
         self.skip_whitespaces();
         self.start = self.current; // after clearing white spaces (if there is any) set the value of
 
@@ -197,6 +224,7 @@ impl Scanner {
             '=' => return self.equal_to_sign(),
             '"' => return self.string(),
             '!' => return self.bang_equal(),
+            '\'' => return self.character(),
             _ => return self.make_token(TokenKind::ERROR),
         }
     }

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::bytes::{Bytes, OPCODE, Value};
 use crate::scanner::Scanner;
 use crate::token::{Token, TokenKind};
@@ -135,6 +137,24 @@ impl <'a>Parser <'a>{
             }
     }
 
+    fn literal(&mut self) {
+        match self.previous.as_ref().unwrap().kind {
+            TokenKind::CHAR => {
+                let val = self.previous.as_ref().unwrap().lexeme.clone();
+                let val = val.chars().next().unwrap();
+                self.write_constant(Value::CHAR(val));
+            },
+            TokenKind::STRING => {
+                let val = self.previous.as_ref().unwrap().lexeme.clone();
+                let a = Rc::new(val);
+                self.write_constant(Value::STRING(a));
+            },
+            TokenKind::FALSE => self.write_constant(Value::BOOL(false)),
+            TokenKind::TRUE => self.write_constant(Value::BOOL(true)),
+            _ => return
+        }
+    }
+
     fn bracket(&mut self) {
         self.parseprecedence(PRECEDENCE::Assignment);
         self.consume(TokenKind::CBRACKET, "Expects a ')'");
@@ -145,6 +165,7 @@ impl <'a>Parser <'a>{
         match self.previous.as_ref().unwrap().kind {
             TokenKind::MINUS | TokenKind::BANG => Some(Self::unary),
             TokenKind::INT | TokenKind::DOUBLE => Some(Self::number),
+            TokenKind::STRING | TokenKind::CHAR |TokenKind::FALSE | TokenKind::TRUE => Some(Self::literal),
             TokenKind::OBRACKET => Some(Self::bracket),
             _ => None,
         }
@@ -203,7 +224,6 @@ impl <'a>Parser <'a>{
         match self.getprefix() {
             Some(func) => func(self),
             None => {
-                self.previous.as_ref().unwrap().print_token();
                 self.error("Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
             }
         }

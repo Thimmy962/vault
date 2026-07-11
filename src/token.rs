@@ -1,6 +1,7 @@
 #[derive(Debug)]
 #[derive(PartialEq)]
 #[derive(Clone)]
+#[allow(non_camel_case_types)]
 pub enum TokenKind {
     BEGIN,
     MINUS, PLUS, STAR, SLASH, INT, DOUBLE, ERROR,
@@ -9,6 +10,7 @@ pub enum TokenKind {
     LESS_THAN, GREATER_THAN,
     EQUAL, EQUAL_EQUAL,
     BANG, BANG_EQUAL,
+    FALSE, TRUE,
     OBRACKET, /*Open Bracket*/ CBRACKET, /*Close Bracket*/
     EOT //end of token
 }

@@ -133,7 +133,8 @@ impl <'a>Parser <'a>{
                 return
             } else {
                 self.error = true;
-                self.error(msg.to_string());
+                self.error(self.current.as_ref().unwrap().line,
+                msg.to_string());
             }
     }
 
@@ -214,17 +215,56 @@ impl <'a>Parser <'a>{
         self.write(OPCODE::EOT);
     }
     
-    fn error(&mut self, message: String) {
+    fn error(&mut self, line: usize, message: String) {
         self.error = true;
-        eprintln!("{message}")
+        eprintln!("[line {}]{}", line, message);
     }
+
+    pub fn match_token(&mut self, kind: TokenKind) -> bool {
+        if !(self.current.as_ref().unwrap().kind == kind) {
+            return false;
+        }
+
+        self.advance();
+        true
+    }
+
+
+    pub fn declaration(&mut self) {
+        self.statement();
+    }
+
+    fn statement(&mut self) {
+        if self.match_token(TokenKind::PRINT) {
+            self.printstatement();
+        } else {
+            self.expressionStatement();
+        }
+    }
+
+    fn expressionStatement(&mut self) {
+        self.expression();
+        self.consume(TokenKind::SEMI_COLON, "Expect ';' after expression.");
+        self.write(OPCODE::POP);
+    }
+
+    fn expect_token(&mut self, token: TokenKind) {
+            }
+
+    fn printstatement(&mut self) {
+        self.expression();
+        self.consume(TokenKind::SEMI_COLON, "Expects ';' after value");
+        self.write(OPCODE::PRINT);
+
+    } 
 
     pub fn parseprecedence(&mut self, precedence: PRECEDENCE) {
         self.advance();
         match self.getprefix() {
             Some(func) => func(self),
             None => {
-                self.error("Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
+                self.error(self.previous.as_ref().unwrap().line, 
+                    "Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
             }
         }
 
@@ -233,7 +273,8 @@ impl <'a>Parser <'a>{
             match self.getinfix() {
                 Some(func) => func(self),
                 None =>  {
-                    self.error("Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
+                    self.error(self.previous.as_ref().unwrap().line,
+                        "Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
                     break;
                 }
             }
@@ -245,7 +286,11 @@ impl <'a>Parser <'a>{
 pub fn compile<'a>(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes) -> bool {
     let mut parser = Parser::build(scanner, bytecodes);
     parser.advance();
-    parser.expression();
+
+    while !parser.match_token(TokenKind::EOT) {
+        parser.declaration();
+    }
+
     parser.endcompiler();
     parser.error
 }

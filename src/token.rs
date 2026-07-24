@@ -3,7 +3,7 @@
 #[derive(Clone)]
 #[allow(non_camel_case_types)]
 pub enum TokenKind {
-    BEGIN,
+    PRINT, SEMI_COLON, LET,
     MINUS, PLUS, STAR, SLASH, INT, DOUBLE, ERROR,
     IDENTIFIER, STRING, CHAR,
     GREATER_EQUAL, LESS_EQUAL, 
@@ -18,7 +18,8 @@ pub enum TokenKind {
 
 pub struct Token {
     pub kind: TokenKind,
-    pub lexeme: String
+    pub lexeme: String,
+    pub line: usize
 }
 
 

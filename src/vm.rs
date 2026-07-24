@@ -12,7 +12,7 @@ use crate::bytes::{Bytes, OPCODE, Value};
             OPCODE::MUL => Value::$type($a * $b),
             OPCODE::DIV => {
                 // Rust's partial_cmp or a simple check works for both 0 and 0.0
-                if $b as f32 == 0.0 { 
+                if $b as f32 == 0.00 { 
                     eprintln!("Runtime Error: Division by zero."); 
                     return true; 
                 }
@@ -74,8 +74,8 @@ impl VM{
         };
         
         match value {
-            Value::INT(val) => self.values.push(Value::INT(-val)),
-            Value::DOUBLE(val) =>  self.values.push(Value::DOUBLE(-val)),
+            Value::INT(val) => self.push(Value::INT(-val)),
+            Value::DOUBLE(val) =>  self.push(Value::DOUBLE(-val)),
             _ => {
                 eprintln!("Runtime Error: Operands must be numeric types.");
                 return true;
@@ -117,7 +117,7 @@ impl VM{
             }
         };
         // 4. Push the calculated result value wrapper back onto the stack!
-        self.values.push(result);
+        self.push(result);
     
         false // Return false indicating no execution error occurred
     }
@@ -163,8 +163,16 @@ impl VM{
             return true;
         }
     };
-        self.values.push(Value::BOOL(res));
+        self.push(Value::BOOL(res));
         false
+    }
+
+    fn pop(&mut self) -> Option<Value> {
+        self.values.pop()
+    }
+
+    fn push(&mut self, val: Value) {
+        self.values.push(val);
     }
 
     fn isfalsey(&mut self) -> bool {
@@ -177,15 +185,15 @@ impl VM{
         };
 
         match value {
-            Value::NIL => self.values.push(Value::BOOL(false)),
+            Value::NIL => self.push(Value::BOOL(false)),
             Value::BOOL(a) => {
-                self.values.push(Value::BOOL(!a))
+                self.push(Value::BOOL(!a))
             }
             Value::STRING(string) => {
                 let val = string.len() > 0;
-                self.values.push(Value::BOOL(!val))
+                self.push(Value::BOOL(val))
             }
-            _ => self.values.push(Value::BOOL(false))
+            _ => self.push(Value::BOOL(false))
         }
 
         false
@@ -207,7 +215,7 @@ impl VM{
                 OPCODE::CONSTANT(index) => {
                     match chunk.values().get(*index) {
                         Some(value) => {
-                            self.values.push(value.clone());
+                            self.push(value.clone());
                         },
                         None => {
                             eprintln!("No value stored");
@@ -228,7 +236,8 @@ impl VM{
                         return true;
                     }
                 },
-                OPCODE::EOT => {
+                OPCODE::POP => {self.pop();},
+                OPCODE::PRINT => {
                     if let Some(val) = self.values.pop() {
                         match val {
                             Value::INT(num) => println!("{num}"),
@@ -247,7 +256,8 @@ impl VM{
                         return true;
                     }
                 }
-                _ => todo!()
+                OPCODE::EOT => return false,
+                _   => todo!()
             }
         }
         false

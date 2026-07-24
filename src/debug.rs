@@ -25,7 +25,7 @@ impl <'a> Debug <'a> {
                 OPCODE::DIV             => self.instruction("Divide", "/"),
                 OPCODE::MUL             => self.instruction("Multiply", "*"),
                 OPCODE::ADD             => self.instruction("Addition", "+"),
-                OPCODE::EOT             => println!("The End"),
+                OPCODE::EOT             => return,
                 OPCODE::GREATER_THAN    => self.instruction("Greater Than", ">"),
                 OPCODE::GREATER_EQUAL   => self.instruction("Greater or Equal", ">="),
                 OPCODE::LESS_EQUAL      => self.instruction("Less or Equal", "<="),
@@ -33,7 +33,9 @@ impl <'a> Debug <'a> {
                 OPCODE::EQUAL           => self.instruction("Assignemnt", "="),
                 OPCODE::EQUAL_EQUAL     => self.instruction("Equality", "=="),
                 OPCODE::BANG            => self.instruction("Bang", "!"),
-                OPCODE::BANG_EQUAL      => self.instruction("Not Equal", "!=")
+                OPCODE::BANG_EQUAL      => self.instruction("Not Equal", "!="),
+                OPCODE::PRINT           => self.instruction("Print", "  "),
+                OPCODE::POP             => self.instruction("pop", "pop"),
             }
         }
     }

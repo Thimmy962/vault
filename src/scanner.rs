@@ -5,6 +5,7 @@ pub struct Scanner {
     source: String,
     current: usize,
     start: usize,
+    line: usize
 }
 
 impl Scanner {
@@ -13,6 +14,7 @@ impl Scanner {
             source,
             current: 0,
             start: 0,
+            line: 1
         }
     }
 
@@ -20,9 +22,13 @@ impl Scanner {
         loop {
             let ch = self.peek();
             match ch {
-                ' ' | '\n' | '\r' => {
+                ' ' | '\r' => {
                     self.advance();
                 },
+                '\n' => {
+                    self.advance();
+                    self.line += 1;
+                }
                 '/' => {
                     if self.next_peek() == '/' {
                         while self.peek() != '\n' && !self.end(){
@@ -107,8 +113,10 @@ impl Scanner {
             "float" => TokenKind::DOUBLE,
             "char"  => TokenKind::CHAR,
             "string" => TokenKind::STRING,
+            "print" => TokenKind::PRINT,
             "false" => TokenKind::FALSE,
             "true"  => TokenKind::TRUE,
+            "let"   => TokenKind::LET,
             _       => TokenKind::IDENTIFIER
         }
     }
@@ -122,6 +130,7 @@ impl Scanner {
         Token {
             kind,
             lexeme: self.source[self.start..self.current].to_string(),
+            line: self.line
         }
     }
 
@@ -133,7 +142,8 @@ impl Scanner {
         self.advance();
         return Token {
             kind: TokenKind::STRING,
-            lexeme: self.source[self.start + 1..self.current - 1].to_string()
+            lexeme: self.source[self.start + 1..self.current - 1].to_string(),
+            line: self.line
         };
     }
 
@@ -188,7 +198,8 @@ impl Scanner {
         self.start += 1;
         Token {
             kind: TokenKind::CHAR,
-            lexeme: self.source[self.start..self.current-1].to_string()
+            lexeme: self.source[self.start..self.current-1].to_string(),
+            line: self.line
         }
     }
 
@@ -200,6 +211,7 @@ impl Scanner {
             return Token {
                 kind: TokenKind::EOT,
                 lexeme: "".to_string(),
+                line: self.line
             };
         }
 
@@ -225,6 +237,7 @@ impl Scanner {
             '"' => return self.string(),
             '!' => return self.bang_equal(),
             '\'' => return self.character(),
+            ';' => return self.make_token(TokenKind::SEMI_COLON),
             _ => return self.make_token(TokenKind::ERROR),
         }
     }

@@ -52,8 +52,10 @@ fn non_shell(config: &Config) {
             debugger.run();
         }
     }
-    vm.run(&chunk);
-    chunk.clear();
+    if !cmpiler{
+        vm.run(&chunk);
+        chunk.clear();
+    }
 }
 
 fn shell(_config: &Config) {

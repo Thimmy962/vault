@@ -57,6 +57,15 @@ impl <'a>Parser <'a>{
         }
     }
 
+
+     fn previous(&self) -> &Token {
+        return self.previous.as_ref().unwrap()
+    }
+
+    fn current(&self) -> &Token {
+        return self.current.as_ref().unwrap()
+    }
+
     fn write_constant(&mut self, value: Value) {
         self.bytecodes.write_constant(value);
     }
@@ -71,7 +80,7 @@ impl <'a>Parser <'a>{
         self.previous = self.current.take();
         'advance: loop {
             self.current = Some(self.scanner.scan_token());
-            if self.current.as_ref().unwrap().kind != TokenKind::ERROR {
+            if self.current().kind != TokenKind::ERROR {
                 break 'advance;
             }
         }
@@ -80,7 +89,7 @@ impl <'a>Parser <'a>{
     fn unary(&mut self) {
         let opcode: OPCODE;
         // match token kind to determine the opcode
-        match self.previous.as_ref().unwrap().kind {
+        match self.previous().kind {
             TokenKind::MINUS => opcode = OPCODE::NEGATE,
             TokenKind::BANG => opcode = OPCODE::BANG,
             _ => return
@@ -95,7 +104,7 @@ impl <'a>Parser <'a>{
     fn binary(&mut self) {
         let opcode: OPCODE;
         // match token kind to determine the opcode
-        match self.previous.as_ref().unwrap().kind {
+        match self.previous().kind {
             TokenKind::MINUS => opcode = OPCODE::SUB,
             TokenKind::PLUS => opcode = OPCODE::ADD,
             TokenKind::STAR => opcode = OPCODE::MUL,
@@ -117,36 +126,36 @@ impl <'a>Parser <'a>{
     }
 
     fn number(&mut self) {
-        if self.previous.as_ref().unwrap().kind == TokenKind::INT {
-            let val = self.previous.as_ref().unwrap().lexeme.clone().parse::<i32>().unwrap();
+        if self.previous().kind == TokenKind::INT {
+            let val = self.previous().lexeme.clone().parse::<i32>().unwrap();
             self.write_constant(Value::INT(val));
         } else {
-            let val = self.previous.as_ref().unwrap().lexeme.clone().parse::<f32>().unwrap();
+            let val = self.previous().lexeme.clone().parse::<f32>().unwrap();
             self.write_constant(Value::DOUBLE(val));
         }
     }
 
 
     fn consume(&mut self, token_kind: TokenKind, msg: &str) {
-        if self.current.as_ref().unwrap().kind == token_kind {
+        if self.current().kind == token_kind {
                 self.advance();
                 return
             } else {
                 self.error = true;
-                self.error(self.current.as_ref().unwrap().line,
+                self.error(self.current().line,
                 msg.to_string());
             }
     }
 
     fn literal(&mut self) {
-        match self.previous.as_ref().unwrap().kind {
+        match self.previous().kind {
             TokenKind::CHAR => {
-                let val = self.previous.as_ref().unwrap().lexeme.clone();
+                let val = self.previous().lexeme.clone();
                 let val = val.chars().next().unwrap();
                 self.write_constant(Value::CHAR(val));
             },
             TokenKind::STRING => {
-                let val = self.previous.as_ref().unwrap().lexeme.clone();
+                let val = self.previous().lexeme.clone();
                 let a = Rc::new(val);
                 self.write_constant(Value::STRING(a));
             },
@@ -156,6 +165,20 @@ impl <'a>Parser <'a>{
         }
     }
 
+    fn variable(&mut self) {
+        let val = Rc::new(self.previous().lexeme.clone());
+        self.write_constant(Value::STRING(val));
+        
+        if self.match_token(TokenKind::EQUAL) {
+            self.expression();
+            self.write(OPCODE::SET_GLOBAL);
+        } else {
+            self.write(OPCODE::GET_GLOBAL)
+        }
+        
+    }
+
+    //handles bracket
     fn bracket(&mut self) {
         self.parseprecedence(PRECEDENCE::Assignment);
         self.consume(TokenKind::CBRACKET, "Expects a ')'");
@@ -163,18 +186,19 @@ impl <'a>Parser <'a>{
 
     // get a prefix for a token; if such token has no prefix it returns None
     fn getprefix(&self) -> Option<fn(&mut Self)> {
-        match self.previous.as_ref().unwrap().kind {
+        match self.previous().kind {
             TokenKind::MINUS | TokenKind::BANG => Some(Self::unary),
             TokenKind::INT | TokenKind::DOUBLE => Some(Self::number),
             TokenKind::STRING | TokenKind::CHAR |TokenKind::FALSE | TokenKind::TRUE => Some(Self::literal),
             TokenKind::OBRACKET => Some(Self::bracket),
+            TokenKind::IDENTIFIER => Some(Self::variable),
             _ => None,
         }
     }
 
     // returns the precedence level of current token
     fn getcurrentprecedence(&self) -> PRECEDENCE {
-         match self.current.as_ref().unwrap().kind {
+         match self.current().kind {
             TokenKind::MINUS | TokenKind::PLUS => PRECEDENCE::Term,
             TokenKind::SLASH | TokenKind::STAR => PRECEDENCE::Factor,
             TokenKind::GREATER_THAN | TokenKind::LESS_THAN | TokenKind::EQUAL_EQUAL |
@@ -186,7 +210,7 @@ impl <'a>Parser <'a>{
 
  // returns the precedence level of previous token
     fn getpreviousprecedence(&self) -> PRECEDENCE {
-         match self.previous.as_ref().unwrap().kind {
+         match self.previous().kind {
             TokenKind::MINUS | TokenKind::PLUS => PRECEDENCE::Term,
             TokenKind::SLASH | TokenKind::STAR => PRECEDENCE::Factor,
             _ => PRECEDENCE::None,
@@ -195,7 +219,7 @@ impl <'a>Parser <'a>{
     }
 
     fn getinfix(&self) -> Option<fn(&mut Self)> {
-         match self.previous.as_ref().unwrap().kind {
+         match self.previous().kind {
             TokenKind::MINUS | TokenKind::PLUS | TokenKind::STAR | TokenKind::SLASH |
             TokenKind::GREATER_THAN | TokenKind::LESS_THAN | TokenKind::EQUAL_EQUAL |
             TokenKind::GREATER_EQUAL | TokenKind::LESS_EQUAL | TokenKind::BANG_EQUAL
@@ -220,8 +244,29 @@ impl <'a>Parser <'a>{
         eprintln!("[line {}]{}", line, message);
     }
 
+
+    fn parseVariable(&mut self, msg: &str) {
+        self.consume(TokenKind::IDENTIFIER, msg);
+        let val = self.previous().lexeme.clone();
+        let a = Rc::new(val);
+        self.write_constant(Value::STRING(a));
+    }
+
+    fn varDeclaration(&mut self) {
+        self.parseVariable("Expects a variable name");
+        if self.match_token(TokenKind::EQUAL) {
+            self.expression();
+        } else {
+            self.write_constant(Value::NIL);
+        }
+
+        self.consume(TokenKind::SEMI_COLON, "Syntax error: ';' is expected after declaration");
+        self.write(OPCODE::DEF_GLOBAL);
+    }
+
+    //checks the current token against an expected token
     pub fn match_token(&mut self, kind: TokenKind) -> bool {
-        if !(self.current.as_ref().unwrap().kind == kind) {
+        if !(self.current().kind == kind) {
             return false;
         }
 
@@ -229,52 +274,79 @@ impl <'a>Parser <'a>{
         true
     }
 
-
-    pub fn declaration(&mut self) {
-        self.statement();
-    }
-
-    fn statement(&mut self) {
-        if self.match_token(TokenKind::PRINT) {
-            self.printstatement();
-        } else {
-            self.expressionStatement();
+    fn synchronize(&mut self) {
+        self.error = false;
+        while !self.match_token(TokenKind::EOT) {
+            match self.current().kind {
+                TokenKind::SEMI_COLON | TokenKind::LET | TokenKind::STRING | TokenKind::PRINT
+                | TokenKind::INT | TokenKind::DOUBLE | TokenKind::CHAR
+                    => break,
+                _ => self.advance(),
+            }
         }
     }
 
+    pub fn declaration(&mut self) {
+        match self.current().kind {
+            TokenKind::LET => {
+                self.advance();
+                self.varDeclaration();
+            }
+            _ => self.statement()
+        }
+
+        if self.error {self.synchronize();}
+    }
+
+    fn statement(&mut self) {
+        match self.current().kind {
+            TokenKind::PRINT => {
+                self.advance();
+                self.printstatement();
+            },
+            _ => {
+                self.expressionStatement();
+            }
+        }
+    }
+
+
+    // for an expression
     fn expressionStatement(&mut self) {
         self.expression();
         self.consume(TokenKind::SEMI_COLON, "Expect ';' after expression.");
         self.write(OPCODE::POP);
     }
 
+
     fn expect_token(&mut self, token: TokenKind) {
             }
 
+    // print statement
     fn printstatement(&mut self) {
         self.expression();
         self.consume(TokenKind::SEMI_COLON, "Expects ';' after value");
         self.write(OPCODE::PRINT);
+    }
 
-    } 
-
+    
     pub fn parseprecedence(&mut self, precedence: PRECEDENCE) {
         self.advance();
         match self.getprefix() {
             Some(func) => func(self),
             None => {
-                self.error(self.previous.as_ref().unwrap().line, 
-                    "Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
+                self.error(self.previous().line, 
+                    "Syntax error: '".to_owned() + &self.previous().lexeme + "' is not a valid syntax");
             }
         }
 
-        while self.current.as_ref().unwrap().kind != TokenKind::EOT && self.getcurrentprecedence() >= precedence {
+        while self.current().kind != TokenKind::EOT && self.getcurrentprecedence() >= precedence {
             self.advance();
             match self.getinfix() {
                 Some(func) => func(self),
                 None =>  {
-                    self.error(self.previous.as_ref().unwrap().line,
-                        "Syntax error: '".to_owned() + &self.previous.as_ref().unwrap().lexeme + "' is not a valid syntax");
+                    self.error(self.previous().line,
+                        "Syntax error: '".to_owned() + &self.previous().lexeme + "' is not a valid syntax");
                     break;
                 }
             }

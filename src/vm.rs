@@ -16,7 +16,7 @@ use crate::bytes::{Bytes, OPCODE, Value};
                     eprintln!("Runtime Error: Division by zero."); 
                     return true; 
                 }
-                Value::$type($a / $b)
+                Value::DOUBLE($a as f32 / $b as f32)
             }
             _ => return true,
         }
@@ -54,7 +54,7 @@ macro_rules! compare {
 
 pub struct VM{
     values: Vec<Value>,
-    globalvar: HashMap<Value, Value>
+    globalvar: HashMap<Rc<String>, Value>
 }
 
 impl VM{
@@ -112,8 +112,8 @@ impl VM{
             (Value::INT(a), Value::DOUBLE(b))    => compute!(*opcode, a as f32, b, DOUBLE),
             (Value::STRING(a), Value::STRING(b))    => concatenate!(*opcode, a, b),
             _ => {
-                eprintln!("Runtime Error: Operands of '{:?}' must be numeric types or situation where each operands is a string .", *opcode);
-                return true;
+                    eprintln!("Runtime Error: Operands of '{:?}' must be numeric types or situation where each operands is a string .", *opcode);
+                    return true;
             }
         };
         // 4. Push the calculated result value wrapper back onto the stack!
@@ -209,7 +209,6 @@ impl VM{
                         return true;
                     }
                 },
-                
                 OPCODE::BANG => if self.isfalsey() { return true; }
 
                 OPCODE::CONSTANT(index) => {
@@ -237,19 +236,38 @@ impl VM{
                     }
                 },
                 OPCODE::POP => {self.pop();},
+                OPCODE::GET_GLOBAL => {
+                    let key = self.pop().unwrap();
+                    let val = match key {
+                        Value::STRING(s) => self.globalvar.get(&s).unwrap().clone(),
+                        other => {
+                            println!("Invalid variable name: {:?}", other);
+                            return true;
+                        }
+                    };
+                    self.push(val);
+
+                }
+                OPCODE::DEF_GLOBAL  | OPCODE::SET_GLOBAL => {
+                    let value = self.pop().unwrap();
+                    let key = self.pop().unwrap();
+                    match key {
+                        Value::STRING(s) => self.globalvar.insert(s, value),
+                        other => {
+                            println!("Invalid variable name: {:?}", other);
+                            return true;
+                        }
+                    };
+                },
                 OPCODE::PRINT => {
                     if let Some(val) = self.values.pop() {
                         match val {
-                            Value::INT(num) => println!("{num}"),
-                            Value::DOUBLE(num) => println!("{:.5}",num),
-                            Value::CHAR(character) => println!("{character}"),
-                            Value::BOOL(val)=> println!("{val}"),
-                            Value::STRING(val) => println!("{val}"),
-
-                            _ => {
-                                eprintln!("Runtime Error: Value type not handled for printing");
-                                return true;
-                            }
+                            Value::INT(num)         => println!("{num}"),
+                            Value::DOUBLE(num)      => println!("{}",num),
+                            Value::CHAR(character)  => println!("{character}"),
+                            Value::BOOL(val)        => println!("{val}"),
+                            Value::STRING(val)      => println!("{val}"),
+                            Value::NIL              => println!("NIL") 
                         }
                     } else {
                         eprintln!("Runtime Error: Stack underflow.");

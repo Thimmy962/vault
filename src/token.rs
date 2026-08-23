@@ -4,7 +4,7 @@
 #[allow(non_camel_case_types)]
 pub enum TokenKind {
     PRINT, SEMI_COLON, LET,
-    MINUS, PLUS, STAR, SLASH, INT, DOUBLE, ERROR,
+    MINUS, PLUS, STAR, SLASH, INT, MOD, DOUBLE, ERROR,
     IDENTIFIER, STRING, CHAR,
     GREATER_EQUAL, LESS_EQUAL, 
     LESS_THAN, GREATER_THAN,

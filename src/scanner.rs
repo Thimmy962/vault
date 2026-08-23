@@ -29,7 +29,7 @@ impl Scanner {
                     self.advance();
                     self.line += 1;
                 }
-                '/' => {
+                /*'/' => {
                     if self.next_peek() == '/' {
                         while self.peek() != '\n' && !self.end(){
                             self.advance();
@@ -37,7 +37,7 @@ impl Scanner {
                     } else {
                         break;
                     }
-                }
+                }*/
                 _ => break,
             }
         }
@@ -121,7 +121,7 @@ impl Scanner {
         }
     }
 
-    // check is the next character is to be consumed is equal the character passed to match
+    // check if the next character to be consumed is equal the character passed to match
     fn match_character(&mut self, character: char) -> bool {
         character == self.peek()
     }
@@ -180,6 +180,16 @@ impl Scanner {
         self.make_token(TokenKind::EQUAL)
     }
 
+    fn slash(&mut self)-> Token {
+        if self.match_character('/') {
+            self.consume();
+            return self.make_token(TokenKind::MOD);
+
+        } else {
+            return self.make_token(TokenKind::SLASH);
+        }
+    }
+
     fn bang_equal(&mut self) -> Token {
         if self.match_character('=') {
             self.advance();
@@ -193,7 +203,7 @@ impl Scanner {
         * self.current is pointing at the character as the open single quote has been consumed
         */
         self.advance(); // points self.current to the closing single quote
-        self.advance(); // points self.current to the next character after tge closing single quote
+        self.advance(); // points self.current to the next character after the closing single quote
 
         self.start += 1;
         Token {
@@ -228,7 +238,7 @@ impl Scanner {
             '+' => return self.make_token(TokenKind::PLUS),
             '-' => return self.make_token(TokenKind::MINUS),
             '*' => return self.make_token(TokenKind::STAR),
-            '/' => return self.make_token(TokenKind::SLASH),
+            '/' => return self.slash(),
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
             '>' => return self.right_arrow(),

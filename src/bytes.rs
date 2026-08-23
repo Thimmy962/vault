@@ -28,7 +28,7 @@ impl  Value {
 #[derive(Debug, Clone)]
 #[allow(non_camel_case_types)]
 pub enum OPCODE {
-    SUB, ADD, MUL, DIV, NEGATE, CONSTANT(usize),// houses the 
+    SUB, ADD, MUL, DIV, MOD, NEGATE, CONSTANT(usize),// houses the 
     GREATER_EQUAL, LESS_EQUAL, 
     LESS_THAN, GREATER_THAN,
     EQUAL, EQUAL_EQUAL, POP, 

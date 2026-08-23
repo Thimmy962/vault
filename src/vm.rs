@@ -10,6 +10,14 @@ use crate::bytes::{Bytes, OPCODE, Value};
             OPCODE::ADD => Value::$type($a + $b),
             OPCODE::SUB => Value::$type($a - $b),
             OPCODE::MUL => Value::$type($a * $b),
+            OPCODE::MOD => {
+                // Rust's partial_cmp or a simple check works for both 0 and 0.0
+                if $b as f32 == 0.00 { 
+                    eprintln!("Runtime Error: Division by zero."); 
+                    return true; 
+                }
+                Value::DOUBLE($a as f32 % $b as f32)
+            }
             OPCODE::DIV => {
                 // Rust's partial_cmp or a simple check works for both 0 and 0.0
                 if $b as f32 == 0.00 { 
@@ -222,7 +230,7 @@ impl VM{
                         }
                     }
                 },
-                OPCODE::SUB | OPCODE::DIV | OPCODE::ADD | OPCODE::MUL => {
+                OPCODE::SUB | OPCODE::DIV | OPCODE::ADD | OPCODE::MUL | OPCODE::MOD => {
                     let bres = self.binary(i); // binary result
                     if bres {
                         return bres;

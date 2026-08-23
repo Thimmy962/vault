@@ -40,20 +40,37 @@ impl PRECEDENCE {
     }
 }
 
-
+/// The main parser for transforming source tokens into bytecode instructions.
+/// 
+/// ### Error Handling Strategy
+/// To prevent a single syntax error from stopping compilation or causing a wall 
+/// of misleading follow-up messages, two error flags are used:
+/// 
+/// - `error`: A transient flag representing **panic mode**. When set, it indicates 
+///   that the parser encountered an error and is currently in an invalid state. 
+///   While `error` is `true`, subsequent syntax errors are suppressed to prevent 
+///   cascading error noise. It is reset to `false` during synchronization when a 
+///   safe statement boundary (like `;` or `let`) is reached, allowing compilation 
+///   to resume and discover further distinct errors.
+/// 
+/// - `hadError`: A sticky flag tracking overall compilation success. Unlike `error`, 
+///   once `hadError` becomes `true`, it remains `true` for the rest of the parsing 
+///   pipeline. It acts as the final source of truth to inform the compiler whether 
+///   valid bytecode was produced or if execution should be aborted.
 pub struct Parser <'a>{
     bytecodes: &'a mut Bytes,
     scanner: &'a mut Scanner,
     previous: Option<Token>,
     current: Option<Token>,
-    error: bool,
+    error: bool, 
+    hadError: bool
 }
 
 impl <'a>Parser <'a>{
     pub fn build(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes)-> Self {
         Parser {
         scanner, bytecodes,
-        previous: None, current: None, error: false
+        previous: None, current: None, error: false, hadError: false
         }
     }
 
@@ -115,6 +132,7 @@ impl <'a>Parser <'a>{
             TokenKind::LESS_EQUAL => opcode = OPCODE::LESS_EQUAL,
             TokenKind::EQUAL_EQUAL => opcode = OPCODE::EQUAL_EQUAL,
             TokenKind::BANG_EQUAL => opcode = OPCODE::BANG_EQUAL,
+            TokenKind::MOD => opcode = OPCODE::MOD,
             _ => return
         }
 
@@ -142,7 +160,7 @@ impl <'a>Parser <'a>{
                 return
             } else {
                 self.error = true;
-                self.error(self.current().line,
+                self.error(self.previous().line,
                 msg.to_string());
             }
     }
@@ -200,7 +218,7 @@ impl <'a>Parser <'a>{
     fn getcurrentprecedence(&self) -> PRECEDENCE {
          match self.current().kind {
             TokenKind::MINUS | TokenKind::PLUS => PRECEDENCE::Term,
-            TokenKind::SLASH | TokenKind::STAR => PRECEDENCE::Factor,
+            TokenKind::SLASH | TokenKind::STAR | TokenKind::MOD => PRECEDENCE::Factor,
             TokenKind::GREATER_THAN | TokenKind::LESS_THAN | TokenKind::EQUAL_EQUAL |
             TokenKind::GREATER_EQUAL | TokenKind::LESS_EQUAL | TokenKind::BANG_EQUAL => PRECEDENCE::Comparison,
             _ => PRECEDENCE::None,
@@ -212,7 +230,7 @@ impl <'a>Parser <'a>{
     fn getpreviousprecedence(&self) -> PRECEDENCE {
          match self.previous().kind {
             TokenKind::MINUS | TokenKind::PLUS => PRECEDENCE::Term,
-            TokenKind::SLASH | TokenKind::STAR => PRECEDENCE::Factor,
+            TokenKind::SLASH | TokenKind::STAR | TokenKind::MOD => PRECEDENCE::Factor,
             _ => PRECEDENCE::None,
         }
  
@@ -222,7 +240,7 @@ impl <'a>Parser <'a>{
          match self.previous().kind {
             TokenKind::MINUS | TokenKind::PLUS | TokenKind::STAR | TokenKind::SLASH |
             TokenKind::GREATER_THAN | TokenKind::LESS_THAN | TokenKind::EQUAL_EQUAL |
-            TokenKind::GREATER_EQUAL | TokenKind::LESS_EQUAL | TokenKind::BANG_EQUAL
+            TokenKind::GREATER_EQUAL | TokenKind::LESS_EQUAL | TokenKind::BANG_EQUAL | TokenKind::MOD
                => Some(Self::binary),
 
             _ => None,
@@ -240,6 +258,9 @@ impl <'a>Parser <'a>{
     }
     
     fn error(&mut self, line: usize, message: String) {
+        if !self.hadError {
+            self.hadError = true;
+        }
         self.error = true;
         eprintln!("[line {}]{}", line, message);
     }
@@ -277,6 +298,7 @@ impl <'a>Parser <'a>{
     fn synchronize(&mut self) {
         self.error = false;
         while !self.match_token(TokenKind::EOT) {
+            if self.previous().kind == TokenKind::SEMI_COLON {return;}
             match self.current().kind {
                 TokenKind::SEMI_COLON | TokenKind::LET | TokenKind::STRING | TokenKind::PRINT
                 | TokenKind::INT | TokenKind::DOUBLE | TokenKind::CHAR
@@ -364,5 +386,5 @@ pub fn compile<'a>(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes) -> bool {
     }
 
     parser.endcompiler();
-    parser.error
+    parser.hadError
 }

@@ -22,6 +22,7 @@ impl <'a> Debug <'a> {
                 },
                 OPCODE::NEGATE          => self.instruction("Negate", "-"),
                 OPCODE::SUB             => self.instruction("Subtract", "-"),
+                OPCODE::MOD             => self.instruction("Modulus", "//"),
                 OPCODE::DIV             => self.instruction("Divide", "/"),
                 OPCODE::MUL             => self.instruction("Multiply", "*"),
                 OPCODE::ADD             => self.instruction("Addition", "+"),

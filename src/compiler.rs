@@ -40,6 +40,7 @@ impl PRECEDENCE {
     }
 }
 
+
 /// The main parser for transforming source tokens into bytecode instructions.
 /// 
 /// ### Error Handling Strategy
@@ -155,6 +156,7 @@ impl <'a>Parser <'a>{
 
 
     fn consume(&mut self, token_kind: TokenKind, msg: &str) {
+        if self.error {return;}
         if self.current().kind == token_kind {
                 self.advance();
                 return
@@ -258,6 +260,7 @@ impl <'a>Parser <'a>{
     }
     
     fn error(&mut self, line: usize, message: String) {
+        if self.error{return;}
         if !self.hadError {
             self.hadError = true;
         }
@@ -357,6 +360,7 @@ impl <'a>Parser <'a>{
         match self.getprefix() {
             Some(func) => func(self),
             None => {
+
                 self.error(self.previous().line, 
                     "Syntax error: '".to_owned() + &self.previous().lexeme + "' is not a valid syntax");
             }

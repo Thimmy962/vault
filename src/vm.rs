@@ -246,26 +246,23 @@ impl VM{
                 OPCODE::POP => {self.pop();},
                 OPCODE::GET_GLOBAL => {
                     let key = self.pop().unwrap();
-                    let val = match key {
-                        Value::STRING(s) => self.globalvar.get(&s).unwrap().clone(),
-                        other => {
-                            println!("Invalid variable name: {:?}", other);
-                            return true;
+                    if let Value::STRING(ref s) = key {
+                        if let Some(val) = self.globalvar.get(s) {
+                            self.push(val.clone());
+                            continue;
                         }
-                    };
-                    self.push(val);
-
+                    }
+                    println!("Invalid variable name: {:?}", key);
+                    return true;
                 }
                 OPCODE::DEF_GLOBAL  | OPCODE::SET_GLOBAL => {
                     let value = self.pop().unwrap();
                     let key = self.pop().unwrap();
-                    match key {
-                        Value::STRING(s) => self.globalvar.insert(s, value),
-                        other => {
-                            println!("Invalid variable name: {:?}", other);
-                            return true;
-                        }
-                    };
+                    if let Value::STRING(ref key) = key {
+                        self.globalvar.insert(key.clone(), value);
+                    }
+                    println!("Invalid variable name: {:?}", key);
+                    return true;
                 },
                 OPCODE::PRINT => {
                     if let Some(val) = self.values.pop() {

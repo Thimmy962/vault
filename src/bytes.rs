@@ -1,11 +1,5 @@
 use std::rc::Rc;
 
-pub trait IsNumber {}
-impl IsNumber for  i32{}
-impl IsNumber for  f32{}
-
-
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value{
     INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), STRING(Rc<String>), NIL

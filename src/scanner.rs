@@ -28,7 +28,7 @@ impl Scanner {
                 '\n' => {
                     self.advance();
                     self.line += 1;
-                }
+                },
                 '/' => {
                     if self.next_peek() == '/' {
                         while self.peek() != '\n' && !self.end(){

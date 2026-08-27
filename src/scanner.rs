@@ -29,7 +29,7 @@ impl Scanner {
                     self.advance();
                     self.line += 1;
                 }
-                /*'/' => {
+                '/' => {
                     if self.next_peek() == '/' {
                         while self.peek() != '\n' && !self.end(){
                             self.advance();
@@ -37,7 +37,7 @@ impl Scanner {
                     } else {
                         break;
                     }
-                }*/
+                }
                 _ => break,
             }
         }
@@ -238,7 +238,8 @@ impl Scanner {
             '+' => return self.make_token(TokenKind::PLUS),
             '-' => return self.make_token(TokenKind::MINUS),
             '*' => return self.make_token(TokenKind::STAR),
-            '/' => return self.slash(),
+            '/' => return self.make_token(TokenKind::SLASH),
+            //'/' => return self.slash(),
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
             '{' => return self.make_token(TokenKind::OCURLY),

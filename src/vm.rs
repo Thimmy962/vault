@@ -255,11 +255,16 @@ impl VM{
                     println!("Invalid variable name: {:?}", key);
                     return true;
                 }
+                OPCODE::GET_LOCAL(index) => {
+                    let val = &self.values[*index];
+                    self.push((*val).clone());
+                }
                 OPCODE::DEF_GLOBAL  | OPCODE::SET_GLOBAL => {
                     let value = self.pop().unwrap();
                     let key = self.pop().unwrap();
                     if let Value::STRING(ref key) = key {
                         self.globalvar.insert(key.clone(), value);
+                        continue;
                     }
                     println!("Invalid variable name: {:?}", key);
                     return true;

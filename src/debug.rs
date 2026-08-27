@@ -38,8 +38,9 @@ impl <'a> Debug <'a> {
                 OPCODE::PRINT           => self.instruction("Print", "  "),
                 OPCODE::POP             => self.instruction("pop", "pop"),
                 OPCODE::DEF_GLOBAL      => self.instruction("Global variable","GLOBAL"),
-                OPCODE::SET_GLOBAL      =>self.instruction("Set Global", "GLOBAL"),
+                OPCODE::SET_GLOBAL      => self.instruction("Set Global", "GLOBAL"),
                 OPCODE::GET_GLOBAL      => self.instruction("Get Global", "GLOBAL"),
+                _                       => todo!(),
             }
         }
     }

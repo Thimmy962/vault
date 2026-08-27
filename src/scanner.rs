@@ -241,6 +241,8 @@ impl Scanner {
             '/' => return self.slash(),
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
+            '{' => return self.make_token(TokenKind::OCURLY),
+            '}' => return self.make_token(TokenKind::CCURLY),
             '>' => return self.right_arrow(),
             '<' => return self.left_arrow(),
             '=' => return self.equal_to_sign(),

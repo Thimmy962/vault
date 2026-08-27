@@ -40,6 +40,29 @@ impl PRECEDENCE {
     }
 }
 
+pub struct Local {
+    name: String, // variable name
+    depth: i8 // the depth where the variable was declared
+}
+
+impl Local {
+    pub fn new(name: String) -> Self {
+        Local {
+            depth: -1, name
+        }
+    }
+}
+
+pub struct Locals {
+    locals: Vec<Local>, // list of references to all local variables
+    depth: i8 // the current depth where the copiler is.
+}
+
+impl Locals {
+    pub fn new() -> Self {
+        Locals {locals: Vec::new(), depth: 0}
+    }
+}
 
 /// The main parser for transforming source tokens into bytecode instructions.
 /// 
@@ -62,7 +85,8 @@ pub struct Parser <'a>{
     bytecodes: &'a mut Bytes,
     scanner: &'a mut Scanner,
     previous: Option<Token>,
-    current: Option<Token>,
+    current: Option<Token>, 
+    locals: Locals, // list of local Variables
     error: bool, 
     hadError: bool
 }
@@ -70,9 +94,30 @@ pub struct Parser <'a>{
 impl <'a>Parser <'a>{
     pub fn build(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes)-> Self {
         Parser {
-        scanner, bytecodes,
-        previous: None, current: None, error: false, hadError: false
+            scanner, bytecodes,
+            previous: None, current: None, error: false, hadError: false,
+            locals: Locals::new()
         }
+    }
+
+    fn addLocal(locals: &mut Locals, name: String) {
+        locals.locals.push(Local::new(name));
+    }
+
+
+    fn resolveLocalVariables(&mut self, name: &str) -> Option<usize>{
+        let line = self.previous().line;
+        for (index, val) in self.locals.locals.iter().rev().enumerate() {
+            if val.depth != self.locals.depth{
+                break;
+            } else if val.name == name{
+                if val.depth == -1 {
+                    self.error(line, "Can't read local variable for its own initialization".to_string());
+                }
+                   return Some(index);
+            }
+        }
+        None
     }
 
 
@@ -138,9 +183,7 @@ impl <'a>Parser <'a>{
         }
 
         let prec = self.getpreviousprecedence();
-
         self.parseprecedence(prec.next());   
-
         self.bytecodes.write(opcode);
     }
 
@@ -154,6 +197,57 @@ impl <'a>Parser <'a>{
         }
     }
 
+    fn declareLocal(&mut self, name: &str) -> bool {
+        if self.locals.depth == 0 {
+            return false;
+        }
+        let name_str = name.to_string();
+        let mut isDuplicate = false;
+
+        for local in self.locals.locals.iter().rev() {
+            if local.depth == -1 && local.depth < self.locals.depth {
+                break;
+            }
+            if local.name == name_str {
+                isDuplicate = true;
+                break;
+            }
+        }
+        if isDuplicate {
+            let line = self.previous().line;
+            self.error(line, "Variable with this name already exists".to_string());
+        }
+        Parser::addLocal(&mut self.locals, name_str);
+        true
+    }
+
+    fn block(&mut self) {
+        while !self.match_token(TokenKind::CCURLY) && !self.match_token(TokenKind::EOT) {
+            self.declaration();
+        }
+
+        self.consume(TokenKind::CCURLY, "Expects '}' to end this scope");
+    }
+
+
+    fn endScope(&mut self) {
+        self.locals.depth -= 1;
+        while let Some(local) = self.locals.locals.last() {
+            if local.depth > self.locals.depth {
+                self.write(OPCODE::POP);
+                self.locals.locals.pop();
+            } else {
+                break;
+            }
+        }
+    }
+
+
+    fn scope(&mut self) {
+        self.locals.depth+=1;// beginScope();
+        self.block();
+        self.endScope();
+    }
 
     fn consume(&mut self, token_kind: TokenKind, msg: &str) {
         if self.error {return;}
@@ -186,16 +280,30 @@ impl <'a>Parser <'a>{
     }
 
     fn variable(&mut self) {
-        let val = Rc::new(self.previous().lexeme.clone());
-        self.write_constant(Value::STRING(val));
+        let mut getOp: OPCODE;
+        let mut setOp: OPCODE;
+        let name = self.previous().lexeme.clone(); // variable name
         
+        if let Some(index) = self.resolveLocalVariables(&name) { //if variable is a
+            //local variable
+            getOp = OPCODE::GET_LOCAL(index); // save the index of the local variable in the opcode
+            // associated ith getting and setting local variables
+            setOp = OPCODE::SET_LOCAL(index);
+
+        } else { 
+            let val = Rc::new(self.previous().lexeme.clone());
+            self.write_constant(Value::STRING(val));
+            getOp = OPCODE::GET_GLOBAL;
+            setOp = OPCODE::SET_GLOBAL;
+        }
+
+
         if self.match_token(TokenKind::EQUAL) {
             self.expression();
-            self.write(OPCODE::SET_GLOBAL);
+            self.write(setOp);
         } else {
-            self.write(OPCODE::GET_GLOBAL)
+            self.write(getOp)
         }
-        
     }
 
     //handles bracket
@@ -271,9 +379,11 @@ impl <'a>Parser <'a>{
 
     fn parseVariable(&mut self, msg: &str) {
         self.consume(TokenKind::IDENTIFIER, msg);
-        let val = self.previous().lexeme.clone();
-        let a = Rc::new(val);
-        self.write_constant(Value::STRING(a));
+        let name = self.previous().lexeme.clone();
+        if !self.declareLocal(&name) {// if compiler is not within a scope, the var declaration is global
+            self.write_constant(Value::STRING(Rc::new(name)));
+        } // if compiler is within a scope declare local would have done a lot of things under the
+        // hood
     }
 
     fn varDeclaration(&mut self) {
@@ -285,7 +395,15 @@ impl <'a>Parser <'a>{
         }
 
         self.consume(TokenKind::SEMI_COLON, "Syntax error: ';' is expected after declaration");
-        self.write(OPCODE::DEF_GLOBAL);
+        if self.locals.depth == 0 { //In globals
+            self.write(OPCODE::DEF_GLOBAL);
+            return;
+        }
+
+        //after the ';' in the defining of local variable is done, then declare the variable defined
+        if let Some(s) = self.locals.locals.last_mut() {
+            s.depth = self.locals.depth;
+        }
     }
 
     //checks the current token against an expected token
@@ -317,12 +435,19 @@ impl <'a>Parser <'a>{
                 self.advance();
                 self.varDeclaration();
             }
+            TokenKind::OCURLY => {
+                self.advance();
+                self.scope();
+            }
             _ => self.statement()
         }
 
         if self.error {self.synchronize();}
     }
 
+    /**
+    *   enters a statement
+    * */
     fn statement(&mut self) {
         match self.current().kind {
             TokenKind::PRINT => {

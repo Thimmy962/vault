@@ -259,15 +259,30 @@ impl VM{
                     let val = &self.values[*index];
                     self.push((*val).clone());
                 }
+                OPCODE::SET_LOCAL(index) => {
+                    //println!("{:?}", self.values.len());
+                    if let Some(val) = self.values.last() {
+                        self.values[*index] = val.clone();
+                    }
+                },
                 OPCODE::DEF_GLOBAL  | OPCODE::SET_GLOBAL => {
                     let value = self.pop().unwrap();
-                    let key = self.pop().unwrap();
+                    /*let key = self.pop().unwrap();
                     if let Value::STRING(ref key) = key {
                         self.globalvar.insert(key.clone(), value);
                         continue;
                     }
                     println!("Invalid variable name: {:?}", key);
-                    return true;
+                    return true; */
+                    match self.pop().unwrap() {
+                        Value::STRING(key_str) => {
+                            self.globalvar.insert(key_str, value);
+                        },
+                        other => {
+                            println!("Invalid variable name: {:?}", other);
+                            return true;
+                        }
+                    }
                 },
                 OPCODE::PRINT => {
                     if let Some(val) = self.values.pop() {

@@ -239,7 +239,7 @@ impl Scanner {
             '-' => return self.make_token(TokenKind::MINUS),
             '*' => return self.make_token(TokenKind::STAR),
             '/' => return self.make_token(TokenKind::SLASH),
-            //'/' => return self.slash(),
+            '%' => return self.make_token(TokenKind::MOD),
             '(' => return self.make_token(TokenKind::OBRACKET),
             ')' => return self.make_token(TokenKind::CBRACKET),
             '{' => return self.make_token(TokenKind::OCURLY),

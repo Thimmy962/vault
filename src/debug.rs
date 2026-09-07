@@ -40,7 +40,10 @@ impl <'a> Debug <'a> {
                 OPCODE::DEF_GLOBAL      => self.instruction("Global variable","GLOBAL"),
                 OPCODE::SET_GLOBAL      => self.instruction("Set Global", "GLOBAL"),
                 OPCODE::GET_GLOBAL      => self.instruction("Get Global", "GLOBAL"),
-                _                       => todo!(),
+                OPCODE::JUMP_IF_FALSE(point)   => self.instruction("Jump if false", &point.to_string()[..]),
+                OPCODE::JUMP(point)            =>  self.instruction("Jump", &point.to_string()[..]),
+
+                _                       => continue,
             }
         }
     }

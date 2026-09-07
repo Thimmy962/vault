@@ -117,6 +117,10 @@ impl Scanner {
             "false" => TokenKind::FALSE,
             "true"  => TokenKind::TRUE,
             "let"   => TokenKind::LET,
+            "&&"    => TokenKind::AND,
+            "||"    => TokenKind::OR,
+            "if"    => TokenKind::IF,
+            "else"  => TokenKind::ELSE,
             _       => TokenKind::IDENTIFIER
         }
     }

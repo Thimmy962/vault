@@ -11,6 +11,7 @@ pub enum TokenKind {
     EQUAL, EQUAL_EQUAL,
     BANG, BANG_EQUAL,
     FALSE, TRUE,
+    AND, OR, IF, ELSE,
     OBRACKET, /*Open Bracket*/ CBRACKET, /*Close Bracket*/
     OCURLY, /*Open curly braces*/ CCURLY, /*Close curly braces*/
     EOT //end of token

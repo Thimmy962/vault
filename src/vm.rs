@@ -179,17 +179,23 @@ impl VM{
         self.values.pop()
     }
 
+    fn peek(&mut self) -> Option<&Value> {
+        self.values.last()
+    }
+
     fn push(&mut self, val: Value) {
         self.values.push(val);
     }
 
+    // checks if the value on the stack is true or false
     fn isfalsey(&mut self) -> bool {
         let value = match self.values.pop() {
             Some(value) => value,
             None => {
+                //eprintln!("Runtime Error: Stack underflow (missing left operand).");
                 eprintln!("Runtime Error: Stack underflow (missing left operand).");
-                return true;
-            }    
+                return true
+            }
         };
 
         match value {
@@ -209,13 +215,14 @@ impl VM{
 
     // returns true for a runtime error
     // false for no error
+
     pub fn run(&mut self, chunk: &Bytes) ->  bool {
-        for i in chunk.codes() {
-            match i {
+        let mut instructions = chunk.codes().iter();
+
+        while let Some(opcode) = instructions.next() {
+            match opcode {
                 OPCODE::NEGATE => {
-                    if self.negate() {
-                        return true;
-                    }
+                    if self.negate() {return true;}
                 },
                 OPCODE::BANG => if self.isfalsey() { return true; }
 
@@ -231,7 +238,7 @@ impl VM{
                     }
                 },
                 OPCODE::SUB | OPCODE::DIV | OPCODE::ADD | OPCODE::MUL | OPCODE::MOD => {
-                    let bres = self.binary(i); // binary result
+                    let bres = self.binary(opcode); // binary result
                     if bres {
                         return bres;
                     }
@@ -239,7 +246,7 @@ impl VM{
                 OPCODE::GREATER_EQUAL | OPCODE::LESS_EQUAL |
                 OPCODE::LESS_THAN | OPCODE::GREATER_THAN 
                 | OPCODE::EQUAL_EQUAL | OPCODE::BANG_EQUAL => {
-                    if self.comparison(i) {
+                    if self.comparison(opcode) {
                         return true;
                     }
                 },
@@ -256,9 +263,12 @@ impl VM{
                     return true;
                 }
                 OPCODE::GET_LOCAL(index) => {
-                    let val = &self.values[*index];
-                    self.push((*val).clone());
-                }
+                    if let Some(val) = self.values.get(*index){
+                        self.push(val.clone());
+                    } else {
+                        eprintln!("Runtime Error: Local index out of bounds");
+                        return true;
+                    }                }
                 OPCODE::SET_LOCAL(index) => {
                     //println!("{:?}", self.values.len());
                     if let Some(val) = self.values.last() {
@@ -283,6 +293,14 @@ impl VM{
                             return true;
                         }
                     }
+                },
+                OPCODE::JUMP_IF_FALSE(offset) => {
+                    if matches!(self.values.last(), Some(Value::BOOL(false))) {
+                        instructions.nth(offset - 1); // Jump forward by `load` instructions
+                    }
+                },
+                OPCODE::JUMP(offset) => {
+                        instructions.nth(offset - 1); // Jump forward by `load` instructions
                 },
                 OPCODE::PRINT => {
                     if let Some(val) = self.values.pop() {

@@ -440,7 +440,7 @@ fn patchJump(&mut self, index: usize) {
     let jump = self.bytecodes.length() - index;
     if let Some(val) = self.bytecodes.read_bytecode_based_on_index(index) {
         match val{
-            OPCODE::JUMP_IF_FALSE(_) => self.bytecodes.write_bytecode_based_on_index(index, OPCODE::JUMP_IF_FALSE(jump - 2)),
+            OPCODE::JUMP_IF_FALSE(_) => self.bytecodes.write_bytecode_based_on_index(index, OPCODE::JUMP_IF_FALSE(jump - 1)),
             OPCODE::JUMP(_) => self.bytecodes.write_bytecode_based_on_index(index, OPCODE::JUMP(jump)),
             _ => return
         }

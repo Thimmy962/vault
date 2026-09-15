@@ -48,11 +48,11 @@ fn non_shell(config: &Config) {
     let mut vm = VM::build();
     if config.debug {
         let debugger = debug::Debug::new(&chunk);
-        if cmpiler == false {
+        if !cmpiler {
             debugger.run();
         }
     }
-    if !cmpiler{
+    else if !cmpiler { // if there is no error with the compiler run vm
         vm.run(&chunk);
         chunk.clear();
     }
@@ -113,15 +113,22 @@ impl Config {
         let mut filename = "".to_string();
         let mut debug = false;
         let mut file_g = false;
-        for arg in env::args() {
-            if "--debug" == arg || "-d" == arg {
-                debug = true;
-            }
+            for arg in env::args() {
+                if "--debug" == arg || "-d" == arg {
+                    debug = true;
+                    continue;
+                }
 
             // .vlt is the name of the file that contains the main function that is the only file that
             // should be passed to the compiler, every other file(".vt") should be called directly
             // or indirectly by main function
-            if arg.contains(".vlt")  {
+            else if arg.contains(".vlt")  {
+                filename = arg;
+                file_g = true;
+                continue;
+            }
+
+            if env::args().len() > 1 {
                 filename = arg;
                 file_g = true;
             }

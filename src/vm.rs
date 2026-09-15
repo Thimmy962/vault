@@ -217,9 +217,14 @@ impl VM{
     // false for no error
 
     pub fn run(&mut self, chunk: &Bytes) ->  bool {
-        let mut instructions = chunk.codes().iter();
+        let codes = chunk.codes();
+        let length = codes.len();
+        let mut ip = 0;
 
-        while let Some(opcode) = instructions.next() {
+
+        while ip < length {
+            let opcode = &codes[ip];
+            ip += 1;
             match opcode {
                 OPCODE::NEGATE => {
                     if self.negate() {return true;}
@@ -275,7 +280,7 @@ impl VM{
                         self.values[*index] = val.clone();
                     }
                 },
-                OPCODE::DEF_GLOBAL  | OPCODE::SET_GLOBAL => {
+                OPCODE::DEF_GLOBAL => {
                     let value = self.pop().unwrap();
                     /*let key = self.pop().unwrap();
                     if let Value::STRING(ref key) = key {
@@ -294,14 +299,30 @@ impl VM{
                         }
                     }
                 },
+                OPCODE::SET_GLOBAL => {
+                    let value = self.pop().unwrap();
+                    match self.pop().unwrap() {
+                        Value::STRING(key_str) => {
+                            self.globalvar.insert(key_str, value);
+                        },
+                        other => {
+                            println!("Invalid variable name: {:?}", other);
+                            return true;
+                        }
+                    }
+                },
+
                 OPCODE::JUMP_IF_FALSE(offset) => {
-                    if matches!(self.values.last(), Some(Value::BOOL(false))) {
-                        instructions.nth(offset - 1); // Jump forward by `load` instructions
+                    if matches!(self.peek(), Some(Value::BOOL(false))) {
+                        ip += offset; // Jump forward by `load` instructions
                     }
                 },
                 OPCODE::JUMP(offset) => {
-                        instructions.nth(offset - 1); // Jump forward by `load` instructions
+                        ip += offset; // Jump forward by `load` instructions
                 },
+                OPCODE::WHILEJUMP(offset) => {
+                        ip -= offset; // Jump forward by `load` instructions
+                }
                 OPCODE::PRINT => {
                     if let Some(val) = self.values.pop() {
                         match val {

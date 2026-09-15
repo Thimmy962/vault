@@ -13,7 +13,7 @@ impl  Value {
             Value::DOUBLE(val) => println!("{:<16} || float    {}", label, val),
             Value::BOOL(val)   => println!("{:<16} || bool     {}", label, val),
             Value::CHAR(val)   => println!("{:<16} || char     {}", label, val),
-            Value::STRING(val)   => println!("{:<16} || char     {}", label, val),
+            Value::STRING(val)   => println!("{:<16} || string     {}", label, val),
             Value::NIL         => println!("{:<16} || nil      NIL", label),
         }
     } 
@@ -32,6 +32,7 @@ pub enum OPCODE {
     // continue to execute
     JUMP(usize), // when this is encountered, that means the expression is true and we can jump beyond
     // the else statement
+    WHILEJUMP(usize), // used by the while loop to determine where to jump to repeating the loop
     DEF_GLOBAL, SET_GLOBAL, GET_GLOBAL, SET_LOCAL(usize), GET_LOCAL(usize),
     BANG, BANG_EQUAL, PRINT, EOT
 }

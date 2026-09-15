@@ -422,7 +422,7 @@ fn varDeclaration(&mut self) {
     }
 }
 
-    /// Synchronizes the parser state after hitting a syntax error to recover at statement boundaries.
+/// Synchronizes the parser state after hitting a syntax error to recover at statement boundaries.
 fn synchronize(&mut self) {
     self.error = false;
     while !self.match_token(TokenKind::EOT) {
@@ -441,16 +441,22 @@ fn patchJump(&mut self, index: usize) {
     if let Some(val) = self.bytecodes.read_bytecode_based_on_index(index) {
         match val{
             OPCODE::JUMP_IF_FALSE(_) => self.bytecodes.write_bytecode_based_on_index(index, OPCODE::JUMP_IF_FALSE(jump - 1)),
-            OPCODE::JUMP(_) => self.bytecodes.write_bytecode_based_on_index(index, OPCODE::JUMP(jump)),
+            OPCODE::JUMP(_) => self.bytecodes.write_bytecode_based_on_index(index, OPCODE::JUMP(jump - 1)),
             _ => return
         }
     }
 }
 
+
+fn patchLoop(&mut self, index: usize) {
+    let offset = self.bytecodes.length() - index + 1;
+    self.write(OPCODE::WHILEJUMP(offset));
+}
+
 fn ifStatement(&mut self) {
-    self.expect_token(TokenKind::OBRACKET);
+    self.expect_token(TokenKind::OBRACKET, "Expected ( after if statement condition.");
     self.expression();
-    self.expect_token(TokenKind::CBRACKET);
+    self.expect_token(TokenKind::CBRACKET, "Expected ( after the expression in the if statement condition.");
 
     self.bytecodes.write(OPCODE::JUMP_IF_FALSE(0));
 
@@ -460,14 +466,35 @@ fn ifStatement(&mut self) {
     self.statement();
 
     self.bytecodes.write(OPCODE::JUMP(0));
-    let jump = self.bytecodes.length() - 1;
+    let jump = self.bytecodes.length() - 1; // get the number of opcodes written to the opcodes list
+        // and subtract one from it already
 
     self.write(OPCODE::POP);
     self.patchJump(thenJump);
+
     if self.match_token(TokenKind::ELSE) {
             self.statement();
     }
     self.patchJump(jump);
+}
+
+fn whileStatement(&mut self) {
+    let offset = self.bytecodes.length(); // at this point the instruction pointer is pointing
+        // at OBRACKET token that comes after the WHILE token
+    self.expect_token(TokenKind::OBRACKET, "Expected ( after if statement condition.");
+    self.expression();
+    self.expect_token(TokenKind::CBRACKET, "Expected ( after the expression in the if statement condition.");
+
+    self.bytecodes.write(OPCODE::JUMP_IF_FALSE(0));
+    let thenJump = self.bytecodes.length() - 1;
+    
+    self.bytecodes.write(OPCODE::POP);
+    self.statement();
+
+    self.patchLoop(offset);
+
+    self.patchJump(thenJump);
+    self.bytecodes.write(OPCODE::POP);
 }
 
 /// Enters and parses statement structures.
@@ -481,6 +508,10 @@ fn statement(&mut self) {
             self.advance();
             self.ifStatement();
         },
+        TokenKind::WHILE => {
+            self.advance();
+                self.whileStatement();
+        }
         TokenKind::OCURLY => {
             self.advance();
             self.scope();
@@ -499,8 +530,8 @@ fn expressionStatement(&mut self) {
 }
 
     /// Validates expected token kind placeholder.
-fn expect_token(&mut self, token: TokenKind) {
-        self.consume(token, "Unexpected token in if statement condition.");
+fn expect_token(&mut self, token: TokenKind, msg: &str) {
+        self.consume(token, msg);
 }
 
 /// Parses print statements and emits print opcodes.

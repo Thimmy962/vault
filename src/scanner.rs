@@ -119,6 +119,8 @@ impl Scanner {
             "let"   => TokenKind::LET,
             "&&"    => TokenKind::AND,
             "||"    => TokenKind::OR,
+            "while" => TokenKind::WHILE,
+            "for"   => TokenKind::FOR,
             "if"    => TokenKind::IF,
             "else"  => TokenKind::ELSE,
             _       => TokenKind::IDENTIFIER

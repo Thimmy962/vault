@@ -1,25 +1,33 @@
-#  This is the design of this language
-## All expressions are after the equal to token
-## All expression, function and variable declarations end ;
-## 
+## 1. Core Syntax
+### Statement Termination
+### Assignments
+### Implementation Status
 
+## 2. Variables & Binding
+### Current Syntax
+### Design Principles
 
+## 3. Control Flow
+### Conditionals
+### While Loops
+### For Loops
 
-# Tokens
- - CONSTANT, ADD, SUB, MUL, DIV, VAR
+## 4. Memory Management
+### Current Runtime
+### Planned Models
 
+## 5. Planned Features
+### Functions
+### Classes
+### Garbage Collection
 
-# Data types
- - INT
- - DOUBLE
- - BOOL
- - NIL
- - String
- - Reference to any of the datatypes
+## 6. Exploratory Features
+### Pointers
+### Closures
+### Alternative Memory Models
 
-## No type inference, every decl
+## 7. Design Philosophy
+### Explicitness
+### Systems-Level Control
+### Incremental Development
 
-# Optional
- - struct with methods
- - enums with methods
- - Pointers

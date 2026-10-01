@@ -1,6 +1,4 @@
-use std::rc::Rc;
-
-use crate::bytes::{Bytes, Value, OPCODE};
+use crate::bytes::{Bytes, OPCODE, Obj, StringObject, Value};
 use crate::scanner::Scanner;
 use crate::token::{Token, TokenKind};
 
@@ -300,8 +298,9 @@ impl<'a> Parser<'a> {
             TokenKind::STRING => {
                 // Wrap heap-allocated string literal in reference counting pointer
                 let val = self.previous().lexeme.clone();
-                let a = Rc::new(val);
-                self.write_constant(Value::STRING(a));
+                let string = StringObject::new(val) as *mut Obj; // cast objstring to obj
+                // obj is the first 
+                self.write_constant(Value::OBJ(string));
             }
             TokenKind::FALSE => self.write_constant(Value::BOOL(false)),
             TokenKind::TRUE => self.write_constant(Value::BOOL(true)),

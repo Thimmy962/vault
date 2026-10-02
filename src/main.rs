@@ -8,6 +8,8 @@ mod scanner;
 mod token;
 mod compiler;
 mod vm;
+mod error;
+mod string;
 
 // static config: Config;
 

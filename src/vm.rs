@@ -1,5 +1,5 @@
-use std::{collections::HashMap, rc::Rc};
-
+use std::{collections::HashMap};
+use crate::string::StringObject;
 use crate::bytes::{Bytes, OPCODE, Value};
 
 
@@ -33,15 +33,17 @@ use crate::bytes::{Bytes, OPCODE, Value};
 
 macro_rules! concatenate {
     ($opcode: expr, $a: expr, $b: expr) => {
+        unsafe {
         match $opcode {
             OPCODE::ADD => {
-                let combined = Rc::new(format!("{}{}", $a, $b));
-                Value::STRING(combined)
+                Value::STRING((*$a).add($b)) // concate b to a and return a new ptr containing the
+        // concatenated strings and null terminated
             },
             _ => {
                 eprintln!("Runtime Error: String can only be concatenated.");
                 return true; 
             }
+        }
         }
     };
 }
@@ -62,7 +64,7 @@ macro_rules! compare {
 
 pub struct VM{
     values: Vec<Value>,
-    globalvar: HashMap<Rc<String>, Value>
+    globalvar: HashMap<*mut StringObject, Value>,
 }
 
 impl VM{
@@ -118,7 +120,7 @@ impl VM{
             (Value::DOUBLE(a), Value::DOUBLE(b)) => compute!(*opcode, a, b, DOUBLE),
             (Value::DOUBLE(a), Value::INT(b))    => compute!(*opcode, a, b as f32, DOUBLE),
             (Value::INT(a), Value::DOUBLE(b))    => compute!(*opcode, a as f32, b, DOUBLE),
-            (Value::STRING(a), Value::STRING(b))    => concatenate!(*opcode, a, b),
+            (Value::STRING(a), Value::STRING(b))      => concatenate!(*opcode, a, b),
             _ => {
                     eprintln!("Runtime Error: Operands of '{:?}' must be numeric types or situation where each operands is a string .", *opcode);
                     return true;
@@ -204,8 +206,10 @@ impl VM{
                 self.push(Value::BOOL(!a))
             }
             Value::STRING(string) => {
-                let val = string.len() > 0;
-                self.push(Value::BOOL(val))
+                unsafe {
+                    let val = (*string).len() > 0;
+                    self.push(Value::BOOL(val))
+                }
             }
             _ => self.push(Value::BOOL(false))
         }
@@ -264,7 +268,7 @@ impl VM{
                             continue;
                         }
                     }
-                    println!("Invalid variable name: {:?}", key);
+                    println!("IIIInvalid variable name: {:?}", key);
                     return true;
                 }
                 OPCODE::GET_LOCAL(index) => {
@@ -330,7 +334,7 @@ impl VM{
                             Value::DOUBLE(num)      => println!("{}",num),
                             Value::CHAR(character)  => println!("{character}"),
                             Value::BOOL(val)        => println!("{val}"),
-                            Value::STRING(val)      => println!("{val}"),
+                            Value::STRING(val)      => unsafe {println!("{}", *val) },
                             Value::NIL              => println!("NIL") 
                         }
                     } else {

@@ -1,52 +1,10 @@
-use std::{alloc::{self, Layout}, ptr};
+use crate::string::StringObject;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value{
-    INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), OBJ(*mut Obj), NIL
+    INT(i32), DOUBLE(f32), BOOL(bool), CHAR(char), STRING(*mut StringObject), NIL
 }
 
-pub enum ObjType {
-    STRING
-}
-
-pub struct Obj{
-    pub obj_type: ObjType,
-    pub marked: bool,
-    pub next: Option<*mut Obj>
-}
-
-pub struct StringObject {
-    pub obj: Obj,
-    pub len: usize,
-    pub start: *mut u8
-}
-
-impl StringObject {
-    pub fn new(lexeme: String) -> *mut StringObject {
-        unsafe{
-            let len = lexeme.len() + 1;
-            let layout = Layout::from_size_align(len, 1).unwrap();
-            let ptr = alloc::alloc(layout); // allocates memory for string array
-            ptr::copy_nonoverlapping(lexeme.as_ptr(), ptr, len as usize); // copy from the lexeme
-            // into the allocated memory
-
-            ptr::write(ptr.add(len-1), 0); //append '\0' to the end
-            let strobjlayout = Layout::new::<StringObject>();
-            let strobjptr = alloc::alloc(strobjlayout) as *mut StringObject;
-
-            let obj = Obj{obj_type: ObjType::STRING, marked: false, next: None};
-
-            let strobj = StringObject {
-                start: ptr, len: len, obj: obj
-            };
-
-            ptr::write(strobjptr, strobj);
-
-            strobjptr
-        }
-
-    }
-}
 
 
 impl  Value {
@@ -57,9 +15,9 @@ impl  Value {
             Value::DOUBLE(val) => println!("{:<16} || float    {}", label, val),
             Value::BOOL(val)   => println!("{:<16} || bool     {}", label, val),
             Value::CHAR(val)   => println!("{:<16} || char     {}", label, val),
-            Value::OBJ(val)   => {
-                match val {
-                    Obj->ObjType::STRING => println!("Hello"),
+            Value::STRING(val)   => {
+                unsafe {
+                    println!("{:<16} || char     {}", label, (**val))
                 }
             },
             Value::NIL         => println!("{:<16} || nil      NIL", label),

@@ -1,4 +1,6 @@
-use crate::bytes::{Bytes, OPCODE, Obj, StringObject, Value};
+use crate::bytes::{Bytes, OPCODE, Value};
+use crate::string::{StringObject};
+use crate::error::{ErrorKind, Error};
 use crate::scanner::Scanner;
 use crate::token::{Token, TokenKind};
 
@@ -39,13 +41,13 @@ impl PRECEDENCE {
 
 /// Represents a single local variable record in the current scope stack.
 pub struct Local {
-    name: String, // Variable identifier name
+    name: *mut StringObject, // Variable identifier name
     depth: i8,    // Lexical scope depth level where variable was declared (-1 = uninitialized)
 }
 
 impl Local {
     /// Creates a new `Local` variable record initialized to uninitialized depth (`-1`).
-    pub fn new(name: String) -> Self {
+    pub fn new(name: *mut StringObject) -> Self {
         Local { depth: -1, name }
     }
 }
@@ -91,11 +93,15 @@ pub struct Parser<'a> {
     locals: Locals,           // Local variable symbol table and depth tracker
     error: bool,              // Transient panic-mode error flag
     hadError: bool,           // Persistent error flag indicating overall compilation failure
+    strings: Vec<*mut StringObject> // to store addresses to string for string interning. If a
+    // string is already in this vm use that same sring instead of creating another pointer for the
+    // string
+
 }
 
 impl<'a> Parser<'a> {
     /// Appends a new local variable to the scope tracker.
-    fn addLocal(locals: &mut Locals, name: String) {
+    fn addLocal(locals: &mut Locals, name: *mut StringObject) {
         // Push a new uninitialized Local record onto the local variable stack
         locals.locals.push(Local::new(name));
     }
@@ -106,7 +112,8 @@ impl<'a> Parser<'a> {
     fn resolveLocalVariables(&mut self, name: &str) -> Option<usize> {
         let line = self.previous().line;
         // Search local variables backward to find the most tightly scoped matching name
-        for (index, val) in self.locals.locals.iter().rev().enumerate() {
+        let name = self.findString(name.to_string());
+        for (index, val) in self.locals.locals.iter().enumerate().rev() {
             if val.name == name {
                 // Prevent reading a local variable inside its own initializer expression
                 if val.depth == -1 {
@@ -213,7 +220,7 @@ impl<'a> Parser<'a> {
         if self.locals.depth == 0 {
             return false;
         }
-        let name_str = name.to_string();
+        let nameObject = self.findString(name.into()); // check if a string (value) has been used before
         let mut isDuplicate = false;
 
         // Verify variable is not already declared within the current scope level
@@ -221,7 +228,7 @@ impl<'a> Parser<'a> {
             if local.depth == -1 && local.depth < self.locals.depth {
                 break;
             }
-            if local.name == name_str {
+            if local.name == nameObject {
                 isDuplicate = true;
                 break;
             }
@@ -231,7 +238,7 @@ impl<'a> Parser<'a> {
             self.error(line, "Variable with this name already exists".to_string());
         }
         // Register variable name into active scope local list
-        Parser::addLocal(&mut self.locals, name_str);
+        Parser::addLocal(&mut self.locals, nameObject);
         true
     }
 
@@ -296,11 +303,10 @@ impl<'a> Parser<'a> {
                 self.write_constant(Value::CHAR(val));
             }
             TokenKind::STRING => {
-                // Wrap heap-allocated string literal in reference counting pointer
                 let val = self.previous().lexeme.clone();
-                let string = StringObject::new(val) as *mut Obj; // cast objstring to obj
+                let string = self.findString(val);
                 // obj is the first 
-                self.write_constant(Value::OBJ(string));
+                self.write_constant(Value::STRING(string));
             }
             TokenKind::FALSE => self.write_constant(Value::BOOL(false)),
             TokenKind::TRUE => self.write_constant(Value::BOOL(true)),
@@ -319,7 +325,7 @@ impl<'a> Parser<'a> {
             getOp = OPCODE::GET_LOCAL(index);
             setOp = OPCODE::SET_LOCAL(index);
         } else {
-            let val = Rc::new(self.previous().lexeme.clone());
+            let val = self.findString(self.previous().lexeme.clone());
             self.write_constant(Value::STRING(val));
             getOp = OPCODE::GET_GLOBAL;
             setOp = OPCODE::SET_GLOBAL;
@@ -410,13 +416,31 @@ impl<'a> Parser<'a> {
         eprintln!("[line {}]{}", line, message);
     }
 
-    /// Consumes a variable identifier token and declares it as local or pre-allocates global reference.
+    /*
+    * look for STR in vm.string.*/
+    fn findString(&mut self, STR: String) -> *mut StringObject {
+        unsafe {
+            // loop throught the list
+            for &string in &self.strings {
+                if (*string).is_equal_to_string(&STR){
+                    return string;
+                }
+            }
+            let newStrObj = StringObject::new(STR);
+            self.strings.push(newStrObj);
+            return newStrObj;
+        }
+    }
+
+    /// Consum es a variable  identifier token and declares it as local or pre-allocates global reference.
     fn parseVariable(&mut self, msg: &str) {
         self.consume(TokenKind::IDENTIFIER, msg);
         let name = self.previous().lexeme.clone();
         // If not inside a scope, register variable as global symbol constant
         if !self.declareLocal(&name) {
-            self.write_constant(Value::STRING(Rc::new(name)));
+            let string = self.findString(name);
+            // obj is the first 
+            self.write_constant(Value::STRING(string));
         }
     }
 
@@ -655,6 +679,7 @@ impl<'a> Parser<'a> {
             error: false,
             hadError: false,
             locals: Locals::new(),
+            strings: Vec::new()
         }
     }
 

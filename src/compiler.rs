@@ -108,7 +108,13 @@ impl<'a> Parser<'a> {
     fn resolveLocalVariables(&mut self, name: &str) -> Option<usize> {
         let line = self.previous().line;
         // Search local variables backward to find the most tightly scoped matching name
-        for (index, val) in self.locals.locals.iter().rev().enumerate() {
+        /*
+        * enumerate means break this thing that can be iterated over to index and content
+        * if rev is called before enum, iter moves to the back, then the last enumerate give the
+        * last thing index of zero
+        * if rev is called after enumerate, enumerate first breaks them down to index and value,
+        * before pointing the iter to the last value */
+        for (index, val) in self.locals.locals.iter().enumerate().rev() {
             if val.name == name {
                 // Prevent reading a local variable inside its own initializer expression
                 if val.depth == -1 {

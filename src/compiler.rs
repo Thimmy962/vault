@@ -425,12 +425,14 @@ impl<'a> Parser<'a> {
                     return string;
                 }
             }
+        }
             let newStrObj = StringObject::new(STR);
+         unsafe {
             (*newStrObj).set_next(*self.objects);
             *self.objects = Some(newStrObj as *mut Obj);
-            self.strings.push(newStrObj);
-            return newStrObj;
         }
+        self.strings.push(newStrObj);
+        return newStrObj;
     }
 
     /// Consum es a variable  identifier token and declares it as local or pre-allocates global reference.

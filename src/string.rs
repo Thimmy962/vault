@@ -19,43 +19,44 @@ pub struct StringObject {
 impl StringObject {
     // create a string obj
     pub fn new(lex: impl Into<String>) -> *mut StringObject {
-        unsafe{
-            let lexeme = lex.into();
-            let len = lexeme.len();
-            if len < 1 {
-                panic!("Zero-byte allocation: trying to allocate memory less than 1 byte");
-            }
-
-            let layout = Layout::from_size_align(len + 1, 1).unwrap_or_else(|error| {
+        let lexeme = lex.into();
+        let len = lexeme.len();
+        if len < 1 {
+            panic!("Zero-byte allocation: trying to allocate memory less than 1 byte");
+         }
+        let layout = Layout::from_size_align(len + 1, 1).unwrap_or_else(|error| {
                 panic!("{error}");
-            });
-            let ptr = alloc::alloc(layout); // allocates memory for string array
+        });
+        let ptr;
+        unsafe{
+            ptr = alloc::alloc(layout); // allocates memory for string array
             if ptr.is_null() {
                 panic!("Memory allocation failed for string contents");
-            }
+            } // if memory allocation was not successful, exit the program
 
             ptr::copy_nonoverlapping(lexeme.as_ptr(), ptr, len as usize); // copy from the lexeme
             // into the allocated memory
             ptr::write(ptr.add(len), 0); //append '\0' to the end
 
+        }
             //create a heap for StringObject
             let strobjlayout = Layout::new::<StringObject>();
-            let strobjptr = alloc::alloc(strobjlayout) as *mut StringObject;
-
+            let strobjptr;
+        unsafe {
+            strobjptr = alloc::alloc(strobjlayout) as *mut StringObject;
             if strobjptr.is_null() {
                 dealloc(ptr, layout);
                 panic!("Memory allocation failed for StringObject wrapper");
             }
-
+        }
             let obj = Obj{marked: false, next: None};
             let strobj = StringObject {
                 ptr: ptr, len: len, obj: obj
             };
 
             // write the content of the strobj into the memory provided for it
-            ptr::write(strobjptr, strobj);
+            unsafe { ptr::write(strobjptr, strobj); }
             strobjptr // return the value
-        }
     }
 
     //returns the len of the array of string
@@ -64,13 +65,14 @@ impl StringObject {
     }
 
     pub fn concate(&mut self, another: *mut StringObject) {
-        unsafe {
-            let nlen = self.len + (*another).len;
-            let layout = Layout::from_size_align(self.len + 1, 1).unwrap_or_else(|error| {
+        let nlen;
+        unsafe { nlen = self.len + (*another).len; }
+        let layout = Layout::from_size_align(self.len + 1, 1).unwrap_or_else(|error| {
                 panic!("{error}");
-            });
-
-            let nptr = realloc(self.ptr, layout, nlen + 1); //new ptr from 
+        });
+        let nptr;
+        unsafe {
+            nptr = realloc(self.ptr, layout, nlen + 1); //new ptr from 
             if nptr.is_null() {
                 panic!("Memory allocation failed for StringObject wrapper");
             }
@@ -78,32 +80,33 @@ impl StringObject {
             ptr::copy_nonoverlapping((*another).ptr, nptr.add(self.len), (*another).len); //append
             //source (content of another.ptr) to destination nptr
             ptr::write(nptr.add(nlen), 0);
-
+        }
             self.ptr = nptr; // assign the new pointer
             self.len = nlen; // assingn len new length
-        }
     }
 
     // reallocate ptr
     pub fn append(&mut self, another: *mut StringObject) {
-        unsafe {
-            let nlen = self.len + (*another).len;
+        let nlen;
+        unsafe { nlen = self.len + (*another).len; }
             let layout = Layout::from_size_align(self.len + 1, 1).unwrap_or_else(|error| {
                 panic!("{error}");
             });
 
-            let nptr = realloc(self.ptr, layout, nlen + 1); //new ptr from 
+        let nptr;
+        unsafe {
+            nptr = realloc(self.ptr, layout, nlen + 1); //new ptr from 
+        }
             if nptr.is_null() {
                 panic!("Memory allocation failed for StringObject wrapper");
             }
-
+        unsafe {
             ptr::copy_nonoverlapping((*another).ptr, nptr.add(self.len), (*another).len); //append
             //source (content of another.ptr) to destination nptr
             ptr::write(nptr.add(nlen), 0);
-
+        }
             self.ptr = nptr; // assign the new pointer
             self.len = nlen; // assingn len new length
-        }
     }
 
     // if the content of String object is the same as String
@@ -118,7 +121,7 @@ impl StringObject {
     }
 
 
-    pub unsafe fn value(&self) -> &str{
+    pub fn value(&self) -> &str{
         let string  = unsafe {
             let self_slice = slice::from_raw_parts(self.ptr, self.len);
             str::from_utf8(self_slice).unwrap()
@@ -134,26 +137,31 @@ impl StringObject {
         self.obj.next = next;
     }
 
-    pub unsafe fn add(&self, rhs: *mut StringObject) -> *mut StringObject {
-     unsafe{
-        let nlen = self.len + (*rhs).len;
+    pub fn add(&self, rhs: *mut StringObject) -> *mut StringObject {
+        let nlen;
+        unsafe{
+            nlen = self.len + (*rhs).len;
+        }
         let layout = Layout::from_size_align(nlen + 1, 1).unwrap(); // create a space wide enought
         // for the 2 string literal
-        let nptr = alloc(layout);
+        let nptr;
+        unsafe { nptr = alloc(layout); }
         if nptr.is_null() {
                 panic!("Memory allocation failed for StringObject wrapper");
         }
 
-        //write the content of the stringobjects to the new pointer
-        ptr::copy_nonoverlapping(self.ptr, nptr, self.len); // copy the first stringobject starting
-        // from the beginning
-        ptr::copy_nonoverlapping((*rhs).ptr, nptr.add(self.len), (*rhs).len); // copy the second
-        // starting from where the first ends
+        unsafe {
+            //write the content of the stringobjects to the new pointer
+            ptr::copy_nonoverlapping(self.ptr, nptr, self.len); // copy the first stringobject starting
+            // from the beginning
+            ptr::copy_nonoverlapping((*rhs).ptr, nptr.add(self.len), (*rhs).len); // copy the second
+            // starting from where the first ends
 
-        ptr::write(nptr.add(nlen), 0); // null terminate after concating the two stringobjects
-
+            ptr::write(nptr.add(nlen), 0); // null terminate after concating the two stringobjects
+        }
         let strobjlayout = Layout::new::<StringObject>();
-        let newobjPtr = alloc(strobjlayout) as *mut StringObject;
+        let newobjPtr;
+        unsafe { newobjPtr = alloc(strobjlayout) as *mut StringObject; }
 
         let strobj = StringObject {
             obj: Obj { marked: false, next: None },
@@ -161,9 +169,8 @@ impl StringObject {
             ptr: nptr
         };
 
-        ptr::write(newobjPtr, strobj);
+        unsafe { ptr::write(newobjPtr, strobj); }
         newobjPtr
-    }
     }
 }
 

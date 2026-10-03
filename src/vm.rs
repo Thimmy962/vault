@@ -33,20 +33,20 @@ use crate::bytes::{Bytes, OPCODE, Value};
 
 macro_rules! concatenate {
     ($self:expr, $opcode: expr, $a: expr, $b: expr) => {
-        unsafe {
         match $opcode {
             OPCODE::ADD => {
-                let s = (*$a).add($b);
-                (*s).set_next($self.objects);
-                $self.objects = Some(s as *mut Obj);
-                Value::STRING(s) // concate b to a and return a new ptr containing the
+                unsafe {
+                    let s = (*$a).add($b);
+                    (*s).set_next($self.objects);
+                    $self.objects = Some(s as *mut Obj);
+                    Value::STRING(s) // concate b to a and return a new ptr containing the
         // concatenated strings and null terminated
+                }
             },
             _ => {
                 eprintln!("Runtime Error: String can only be concatenated.");
                 return true; 
             }
-        }
         }
     };
 }

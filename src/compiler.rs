@@ -1,6 +1,5 @@
 use crate::bytes::{Bytes, OPCODE, Value};
-use crate::string::{StringObject};
-use crate::error::{ErrorKind, Error};
+use crate::string::{StringObject, Obj};
 use crate::scanner::Scanner;
 use crate::token::{Token, TokenKind};
 
@@ -93,10 +92,10 @@ pub struct Parser<'a> {
     locals: Locals,           // Local variable symbol table and depth tracker
     error: bool,              // Transient panic-mode error flag
     hadError: bool,           // Persistent error flag indicating overall compilation failure
-    strings: Vec<*mut StringObject> // to store addresses to string for string interning. If a
+    strings: Vec<*mut StringObject>, // to store addresses to string for string interning. If a
     // string is already in this vm use that same sring instead of creating another pointer for the
     // string
-
+    objects: &'a mut Option<*mut Obj>
 }
 
 impl<'a> Parser<'a> {
@@ -427,6 +426,8 @@ impl<'a> Parser<'a> {
                 }
             }
             let newStrObj = StringObject::new(STR);
+            (*newStrObj).set_next(*self.objects);
+            *self.objects = Some(newStrObj as *mut Obj);
             self.strings.push(newStrObj);
             return newStrObj;
         }
@@ -670,7 +671,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Builds a new `Parser` instance tied to the provided scanner and bytecode buffer.
-    pub fn build(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes) -> Self {
+    pub fn build(scanner: &'a mut Scanner,
+        bytecodes: &'a mut Bytes, 
+        objects: &'a mut Option<*mut Obj>) -> Self {
         Parser {
             scanner,
             bytecodes,
@@ -679,7 +682,8 @@ impl<'a> Parser<'a> {
             error: false,
             hadError: false,
             locals: Locals::new(),
-            strings: Vec::new()
+            strings: Vec::new(),
+            objects
         }
     }
 
@@ -751,15 +755,19 @@ impl<'a> Parser<'a> {
 }
 
 /// Compiles source tokens into bytecode, returning true if any compilation errors occurred.
-pub fn compile<'a>(scanner: &'a mut Scanner, bytecodes: &'a mut Bytes) -> bool {
-    let mut parser = Parser::build(scanner, bytecodes);
-    parser.advance();
+pub fn compile<'a>(
+        scanner: &'a mut Scanner,
+        bytecodes: &'a mut Bytes, 
+        objects: &'a mut Option<*mut Obj>) -> bool
+    {
+        let mut parser = Parser::build(scanner, bytecodes, objects);
+        parser.advance();
 
-    // Iterate through input token stream compiling statements until End-Of-Tape
-    while !parser.match_token(TokenKind::EOT) {
-        parser.declaration();
+        // Iterate through input token stream compiling statements until End-Of-Tape
+        while !parser.match_token(TokenKind::EOT) {
+            parser.declaration();
+        }
+
+        parser.endcompiler();
+        parser.hadError
     }
-
-    parser.endcompiler();
-    parser.hadError
-}

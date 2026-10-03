@@ -17,7 +17,7 @@ use std::{env, fs, io::{self, Write}, process};
 use scanner::Scanner;
 use bytes::Bytes;
 
-use crate::vm::VM;
+use crate::{string::Obj, vm::VM};
 
 fn main() {
     let config = Config::new(); // read command line arguments
@@ -46,8 +46,10 @@ fn non_shell(config: &Config) {
     file += "\0";
     let mut scanner = Scanner::build(file);
     let mut chunk = bytes::Bytes::new();
-    let cmpiler = compiler::compile(&mut scanner, &mut chunk);
-    let mut vm = VM::build();
+    let mut objects: Option<*mut Obj> = None;
+
+    let cmpiler = compiler::compile(&mut scanner, &mut chunk, &mut objects);
+    let mut vm = VM::build(objects);
     if config.debug {
         let debugger = debug::Debug::new(&chunk);
         if !cmpiler {
@@ -63,7 +65,7 @@ fn non_shell(config: &Config) {
 fn shell(_config: &Config) {
     let mut _chunk = Bytes::new();
     let mut input = String::new();
-    let mut vm = VM::build();
+    let mut objects: Option<*mut Obj> = None;
     loop {
         print!(":> ");
         let _ = io::stdout().flush();
@@ -83,7 +85,10 @@ fn shell(_config: &Config) {
         // pass a reference of the input to the scanner
         let mut scanner = Scanner::build((&input).to_string());
 
-        let cmpiler = compiler::compile(&mut scanner, &mut _chunk);
+        let cmpiler = compiler::compile(&mut scanner, &mut _chunk, &mut objects);
+    
+        let mut vm = VM::build(objects);
+
         if _config.debug {
             let debugger = debug::Debug::new(&_chunk);
             if !cmpiler {

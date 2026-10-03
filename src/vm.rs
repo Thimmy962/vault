@@ -1,5 +1,5 @@
 use std::{collections::HashMap};
-use crate::string::StringObject;
+use crate::string::{Obj, StringObject};
 use crate::bytes::{Bytes, OPCODE, Value};
 
 
@@ -32,11 +32,14 @@ use crate::bytes::{Bytes, OPCODE, Value};
 }
 
 macro_rules! concatenate {
-    ($opcode: expr, $a: expr, $b: expr) => {
+    ($self:expr, $opcode: expr, $a: expr, $b: expr) => {
         unsafe {
         match $opcode {
             OPCODE::ADD => {
-                Value::STRING((*$a).add($b)) // concate b to a and return a new ptr containing the
+                let s = (*$a).add($b);
+                (*s).set_next($self.objects);
+                $self.objects = Some(s as *mut Obj);
+                Value::STRING(s) // concate b to a and return a new ptr containing the
         // concatenated strings and null terminated
             },
             _ => {
@@ -47,6 +50,7 @@ macro_rules! concatenate {
         }
     };
 }
+
 
 macro_rules! compare {
     ($opcode:expr, $a:expr, $b:expr) => {
@@ -65,13 +69,15 @@ macro_rules! compare {
 pub struct VM{
     values: Vec<Value>,
     globalvar: HashMap<*mut StringObject, Value>,
+    objects: Option<*mut Obj>
 }
 
 impl VM{
-    pub fn build() -> Self {
+    pub fn build(objects: Option<*mut Obj>) -> Self {
         VM {
             values: Vec::new(),
-            globalvar: HashMap::new()
+            globalvar: HashMap::new(),
+            objects: objects
         }
     }
     fn negate(&mut self) -> bool {
@@ -120,7 +126,7 @@ impl VM{
             (Value::DOUBLE(a), Value::DOUBLE(b)) => compute!(*opcode, a, b, DOUBLE),
             (Value::DOUBLE(a), Value::INT(b))    => compute!(*opcode, a, b as f32, DOUBLE),
             (Value::INT(a), Value::DOUBLE(b))    => compute!(*opcode, a as f32, b, DOUBLE),
-            (Value::STRING(a), Value::STRING(b))      => concatenate!(*opcode, a, b),
+            (Value::STRING(a), Value::STRING(b))      => concatenate!(self,*opcode, a, b),
             _ => {
                     eprintln!("Runtime Error: Operands of '{:?}' must be numeric types or situation where each operands is a string .", *opcode);
                     return true;

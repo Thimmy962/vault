@@ -1,4 +1,4 @@
-use std::{alloc::{self, Layout, alloc, dealloc, realloc}, fmt, ops::Add, ptr, slice};
+use std::{alloc::{self, Layout, alloc, dealloc, realloc}, fmt, ptr, slice};
 
 #[derive(PartialEq)]
 pub enum ObjType {
@@ -107,12 +107,14 @@ impl StringObject {
     }
 
     // if the content of String object is the same as String
-    pub unsafe fn is_equal_to_string(&self, STR: &str) -> bool {
+    pub fn is_equal_to_string(&self, STR: &str) -> bool {
         /* convert strobj.ptr to [u8]
          * convert STR to [u8], then compare
         */
-        let self_slice = slice::from_raw_parts(self.ptr, self.len);
-        self_slice == STR.as_bytes()
+        unsafe {
+            let self_slice = slice::from_raw_parts(self.ptr, self.len);
+            self_slice == STR.as_bytes()
+        }
     }
 
 
@@ -122,6 +124,14 @@ impl StringObject {
             str::from_utf8(self_slice).unwrap()
         };
         string
+    }
+
+    pub fn next(&self) -> Option<*mut Obj> {
+        return self.obj.next;
+    }
+
+    pub fn set_next(&mut self, next: Option<*mut Obj>) {
+        self.obj.next = next;
     }
 
     pub unsafe fn add(&self, rhs: *mut StringObject) -> *mut StringObject {

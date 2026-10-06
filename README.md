@@ -34,17 +34,23 @@ Vault is a programming language written in Rust. It is primarily a learning proj
 
 * **Runtime objects**
 
-  * Uses heap-allocated objects with runtime type information.
+  * Uses heap-allocated objects with runtime type information all depends on Rust.
 
 * **Strings**
 
-  * Supports runtime string objects backed by manually managed character buffers.
+  * Supports runtime string objects backed by Ref Counting in Rust.
 
 * **Memory management**
 
-  * Implements low-level heap allocation and runtime object tracking as part of the language runtime.
+  * Memory management depends on Rust, not manually implemented.
 
 ## Planned Work
+
+* Each language feature is implemented in its own dedicated branch, building directly on the completed work from the previous branch
+
+* **Objects
+  
+  * Objects (string, function...) will be manually created on the heap
 
 * **Garbage collector**
 

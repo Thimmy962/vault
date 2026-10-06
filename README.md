@@ -48,7 +48,7 @@ Vault is a programming language written in Rust. It is primarily a learning proj
 
 * Each language feature is implemented in its own dedicated branch, building directly on the completed work from the previous branch
 
-* **Objects
+* **Objects**
   
   * Objects (string, function...) will be manually created on the heap
 

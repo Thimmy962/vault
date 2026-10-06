@@ -32,6 +32,8 @@ Vault is a programming language written in Rust. It is primarily a learning proj
 
   * Supports conditional branching and is being extended with additional control-flow constructs.
 
+## Specific feature implemented in this branch 
+
 * **Runtime objects**
 
   * Uses heap-allocated objects with runtime type information.
@@ -40,9 +42,20 @@ Vault is a programming language written in Rust. It is primarily a learning proj
 
   * Supports runtime string objects backed by manually managed character buffers.
 
+ * **String Interning**
+
+  * Supports string object interning for fast comparison of strings and reduced heap allocation by using the same string object for a new string provided that a string with that same value has already been created on the heap.
+  * This increases parsing and compilation time but reduces executions on the vm
+
 * **Memory management**
 
   * Implements low-level heap allocation and runtime object tracking as part of the language runtime.
+
+## Specific feature removed in this branch
+
+* **String Management through Rc**
+
+  * Strings were previously managed using Rust's reference counting; that was stripped away and manuallly implemented on the heap go garbage collection.
 
 ## Planned Work
 

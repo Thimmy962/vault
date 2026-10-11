@@ -1,7 +1,7 @@
 # Vault
 
-Vault is a programming language written in Rust. It is primarily a learning project focused on understanding how programming languages, virtual machines, runtimes, and memory management work internally using _clox from Crafting Interpreters as a guide.
-Work on this project on weekdays (I do something else on weekends) 
+Vault is a programming language written in Rust. It is primarily a learning project focused on understanding how programming languages, virtual machines, runtimes, and memory management work internally using **_clox_** from Crafting Interpreters as a guide.
+_Work on this project on weekdays (I do something else on weekends)_
 
 ## Current Features
 
